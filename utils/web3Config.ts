@@ -29,7 +29,7 @@ export const config = getDefaultConfig({
   appName: 'Monad Warriors',
   projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'YOUR_PROJECT_ID', // 需要从WalletConnect获取
   chains: [monadTestnet],
-  ssr: true,
+  ssr: false, // 禁用SSR以避免构建问题
 });
 
 // 合约地址 (部署后需要更新)

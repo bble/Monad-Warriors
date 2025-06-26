@@ -22,6 +22,13 @@ const nextConfig = {
         path: false,
       };
     }
+
+    // 修复模块解析问题
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@vanilla-extract/sprinkles/createUtils': require.resolve('@vanilla-extract/sprinkles/createUtils'),
+    };
+
     return config;
   },
   env: {
