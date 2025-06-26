@@ -267,7 +267,7 @@ Monad-Warriors/
 ```bash
 # .env 文件配置示例
 NEXT_PUBLIC_MONAD_TESTNET_RPC_URL=https://testnet-rpc.monad.xyz
-NEXT_PUBLIC_CHAIN_ID=41454
+NEXT_PUBLIC_CHAIN_ID=10143
 NEXT_PUBLIC_MWAR_TOKEN_ADDRESS=0x...
 NEXT_PUBLIC_HERO_NFT_ADDRESS=0x...
 NEXT_PUBLIC_GAME_CORE_ADDRESS=0x...
@@ -281,7 +281,7 @@ networks: {
   monadTestnet: {
     url: process.env.NEXT_PUBLIC_MONAD_TESTNET_RPC_URL,
     accounts: [process.env.PRIVATE_KEY],
-    chainId: 41454
+    chainId: 10143
   }
 }
 ```

@@ -3,7 +3,7 @@ import { defineChain } from 'viem';
 
 // 定义Monad Testnet链
 export const monadTestnet = defineChain({
-  id: 41454,
+  id: 10143,
   name: 'Monad Testnet',
   nativeCurrency: {
     decimals: 18,

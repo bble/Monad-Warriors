@@ -31,7 +31,7 @@ async function main() {
     `NEXT_PUBLIC_MWAR_TOKEN_ADDRESS=${mockAddresses.mwarToken}`,
     `NEXT_PUBLIC_HERO_NFT_ADDRESS=${mockAddresses.heroNFT}`,
     `NEXT_PUBLIC_GAME_CORE_ADDRESS=${mockAddresses.gameCore}`,
-    `NEXT_PUBLIC_CHAIN_ID=41454`,
+    `NEXT_PUBLIC_CHAIN_ID=10143`,
     `NEXT_PUBLIC_MONAD_TESTNET_RPC_URL=https://testnet-rpc.monad.xyz`
   ];
 
