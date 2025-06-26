@@ -7,6 +7,7 @@
     "dev": "next dev -p 3001",
     "demo": "./scripts/demo-start.sh",
     "build": "next build",
+    "export": "next export",
     "start": "next start",
     "lint": "next lint",
     "compile": "hardhat compile",

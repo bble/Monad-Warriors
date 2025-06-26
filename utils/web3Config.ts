@@ -27,7 +27,7 @@ export const monadTestnet = defineChain({
 // RainbowKit配置
 export const config = getDefaultConfig({
   appName: 'Monad Warriors',
-  projectId: 'monad-warriors-gamefi', // 在实际部署时需要从WalletConnect获取
+  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'YOUR_PROJECT_ID', // 需要从WalletConnect获取
   chains: [monadTestnet],
   ssr: true,
 });
