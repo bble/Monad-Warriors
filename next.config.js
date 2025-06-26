@@ -5,6 +5,12 @@ const nextConfig = {
   images: {
     unoptimized: true
   },
+  transpilePackages: [
+    '@rainbow-me/rainbowkit',
+    '@vanilla-extract/css',
+    '@vanilla-extract/dynamic',
+    '@vanilla-extract/sprinkles'
+  ],
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
@@ -23,11 +29,11 @@ const nextConfig = {
       };
     }
 
-    // 修复模块解析问题
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      '@vanilla-extract/sprinkles/createUtils': require.resolve('@vanilla-extract/sprinkles/createUtils'),
-    };
+    // 强制使用 CommonJS 导入
+    config.module.rules.push({
+      test: /node_modules\/@vanilla-extract\/sprinkles/,
+      type: 'javascript/auto',
+    });
 
     return config;
   },
