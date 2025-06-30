@@ -32,6 +32,20 @@ export const config = getDefaultConfig({
   ssr: false, // 禁用SSR以避免构建问题
 });
 
+// Gas优化配置
+export const GAS_CONFIG = {
+  // 推荐的gas价格 (1 gwei)
+  gasPrice: '1000000000',
+  // 不同操作的gas限制
+  gasLimits: {
+    transfer: 21000,
+    approve: 50000,
+    mintHero: 300000,
+    levelUp: 150000,
+    battle: 200000,
+  },
+} as const;
+
 // 合约地址 - 已部署的真实地址
 export const CONTRACT_ADDRESSES = {
   MWAR_TOKEN: process.env.NEXT_PUBLIC_MWAR_TOKEN_ADDRESS || '0xD2f5d0418577BBCC98aAc97807e433dd091C1Be8',

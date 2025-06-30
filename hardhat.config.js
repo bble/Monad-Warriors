@@ -20,9 +20,8 @@ module.exports = {
       url: process.env.MONAD_TESTNET_RPC_URL || "https://testnet-rpc.monad.xyz",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 10143, // Monad Testnet Chain ID
-      gasPrice: 100000000000, // 100 gwei - 更高的gas价格
-      gas: 30000000, // 增加gas限制
-      gasMultiplier: 1.2, // Gas价格乘数
+      gasPrice: 1000000000, // 1 gwei - 降低gas价格
+      gas: 8000000, // 合理的gas限制
     },
     localhost: {
       url: "http://127.0.0.1:8545",
