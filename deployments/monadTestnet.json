@@ -1,0 +1,30 @@
+{
+  "network": "monadTestnet",
+  "deployer": "0xDB7E64447b7F537712dcA18516F11fF91b58ea5a",
+  "timestamp": "2025-06-30T07:41:56.873Z",
+  "contracts": {
+    "mwarToken": "0xD2f5d0418577BBCC98aAc97807e433dd091C1Be8",
+    "heroNFT": "0xcD7Cd65d4bE940280B752e10C3eEb6D6cF53B18D",
+    "gameCore": "0xecde73957F1c15cE2E225fA4F485ABE03fcC7E48"
+  },
+  "chainId": 10143,
+  "rpcUrl": "https://testnet-rpc.monad.xyz",
+  "explorerUrl": "https://testnet-explorer.monad.xyz",
+  "gasUsed": {
+    "mwarToken": "~1,456,520",
+    "heroNFT": "~2,606,560", 
+    "gameCore": "~1,394,323",
+    "total": "~5,457,403"
+  },
+  "verification": {
+    "mwarTokenVerified": false,
+    "heroNFTVerified": false,
+    "gameCoreVerified": false
+  },
+  "notes": [
+    "Initial deployment successful",
+    "All contracts deployed and configured",
+    "GameCore added as authorized contract for MWAR token",
+    "Ready for frontend integration"
+  ]
+}
