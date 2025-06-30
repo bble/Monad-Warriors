@@ -62,6 +62,7 @@ export const getClassIcon = (classType: number): string => {
 export const GAME_CONSTANTS = {
   RARITY_NAMES: ['Common', 'Rare', 'Epic', 'Legendary'],
   CLASS_NAMES: ['Warrior', 'Mage', 'Archer', 'Assassin', 'Priest'],
+  RARITY_COLORS: ['gray', 'blue', 'purple', 'yellow'], // 用于动态构建CSS类名
   MINT_COSTS: {
     0: 100,   // Common
     1: 300,   // Rare

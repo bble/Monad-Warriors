@@ -187,7 +187,7 @@ export default function HeroCollection() {
                 <span>Minting...</span>
               </div>
             ) : (
-              `Mint ${GAME_CONSTANTS.RARITY_NAMES[selectedRarity as keyof typeof GAME_CONSTANTS.RARITY_NAMES]} ${GAME_CONSTANTS.CLASS_NAMES[selectedClass as keyof typeof GAME_CONSTANTS.CLASS_NAMES]} (${GAME_CONSTANTS.MINT_COSTS[selectedRarity as keyof typeof GAME_CONSTANTS.MINT_COSTS]} MWAR)`
+              `Mint ${GAME_CONSTANTS.RARITY_NAMES[selectedRarity]} ${GAME_CONSTANTS.CLASS_NAMES[selectedClass]} (${GAME_CONSTANTS.MINT_COSTS[selectedRarity as keyof typeof GAME_CONSTANTS.MINT_COSTS]} MWAR)`
             )}
           </button>
         </div>
