@@ -7,7 +7,7 @@ export const DEPLOYED_CONTRACTS = {
   GAME_CORE: '0xecde73957F1c15cE2E225fA4F485ABE03fcC7E48',
   NETWORK: 'monadTestnet',
   CHAIN_ID: 10143,
-  DEPLOYED_AT: '2025-06-30T08:43:10.353Z'
+  DEPLOYED_AT: '2025-06-30T09:07:01.004Z'
 } as const;
 
 export const verifyContractAddresses = () => {
