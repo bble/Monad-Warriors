@@ -43,7 +43,7 @@ export default function HeroCollection() {
     abi: HERO_NFT_ABI,
     functionName: 'balanceOf',
     args: [address as `0x${string}`],
-  });
+  }) as { data: bigint | undefined };
 
   // 读取MWAR余额
   const { data: mwarBalance } = useReadContract({
@@ -51,7 +51,7 @@ export default function HeroCollection() {
     abi: MWAR_TOKEN_ABI,
     functionName: 'balanceOf',
     args: [address as `0x${string}`],
-  });
+  }) as { data: bigint | undefined };
 
   // 铸造英雄
   const { writeContract, data: mintHash } = useWriteContract();

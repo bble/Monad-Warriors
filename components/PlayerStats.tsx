@@ -15,7 +15,7 @@ export default function PlayerStats() {
     abi: GAME_CORE_ABI,
     functionName: 'playerStats',
     args: [address as `0x${string}`],
-  });
+  }) as { data: { totalBattles: bigint; wins: bigint; losses: bigint; draws: bigint; totalRewards: bigint; lastBattleTime: bigint; winStreak: bigint; maxWinStreak: bigint } | undefined };
 
   // 读取MWAR余额
   const { data: mwarBalance } = useReadContract({
@@ -23,7 +23,7 @@ export default function PlayerStats() {
     abi: MWAR_TOKEN_ABI,
     functionName: 'balanceOf',
     args: [address as `0x${string}`],
-  });
+  }) as { data: bigint | undefined };
 
   // 读取胜率
   const { data: winRate } = useReadContract({
@@ -31,7 +31,7 @@ export default function PlayerStats() {
     abi: GAME_CORE_ABI,
     functionName: 'getPlayerWinRate',
     args: [address as `0x${string}`],
-  });
+  }) as { data: bigint | undefined };
 
   const totalBattles = playerStats ? Number(playerStats.totalBattles) : 0;
   const wins = playerStats ? Number(playerStats.wins) : 0;

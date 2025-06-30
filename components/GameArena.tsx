@@ -32,7 +32,7 @@ export default function GameArena() {
     abi: GAME_CORE_ABI,
     functionName: 'playerStats',
     args: [address as `0x${string}`],
-  });
+  }) as { data: { totalBattles: bigint; wins: bigint; losses: bigint; draws: bigint; totalRewards: bigint; lastBattleTime: bigint; winStreak: bigint; maxWinStreak: bigint } | undefined };
 
   // 读取胜率
   const { data: winRate } = useReadContract({
@@ -40,7 +40,7 @@ export default function GameArena() {
     abi: GAME_CORE_ABI,
     functionName: 'getPlayerWinRate',
     args: [address as `0x${string}`],
-  });
+  }) as { data: bigint | undefined };
 
   // 开始战斗
   const { writeContract, data: battleHash } = useWriteContract();
