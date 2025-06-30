@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { 
-  CONTRACT_ADDRESSES, 
-  HERO_NFT_ABI, 
-  MWAR_TOKEN_ABI,
+import {
   GAME_CONSTANTS,
   formatMWAR,
   getRarityColor,
-  getClassIcon 
+  getClassIcon
 } from '@/utils/web3Config';
+import {
+  CONTRACT_ADDRESSES,
+  HERO_NFT_ABI,
+  MWAR_TOKEN_ABI
+} from '@/utils/contractABI';
 
 interface HeroAttributes {
   strength: bigint;

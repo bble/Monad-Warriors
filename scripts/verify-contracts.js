@@ -9,8 +9,9 @@ async function main() {
     game: "0xecde73957F1c15cE2E225fA4F485ABE03fcC7E48"
   };
 
-  const [deployer] = await ethers.getSigners();
-  console.log("👤 Verifying with account:", deployer.address);
+  try {
+    const [deployer] = await ethers.getSigners();
+    console.log("👤 Verifying with account:", deployer.address);
 
   try {
     // 验证MWAR Token
@@ -80,6 +81,7 @@ async function main() {
 
   } catch (error) {
     console.error("❌ Verification failed:", error.message);
+    console.error("Full error:", error);
   }
 }
 

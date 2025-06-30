@@ -1,10 +1,10 @@
 import { useAccount, useReadContract } from 'wagmi';
-import { 
-  CONTRACT_ADDRESSES, 
+import { formatMWAR } from '@/utils/web3Config';
+import {
+  CONTRACT_ADDRESSES,
   GAME_CORE_ABI,
-  MWAR_TOKEN_ABI,
-  formatMWAR 
-} from '@/utils/web3Config';
+  MWAR_TOKEN_ABI
+} from '@/utils/contractABI';
 
 export default function PlayerStats() {
   const { address } = useAccount();

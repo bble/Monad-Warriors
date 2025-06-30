@@ -57,3 +57,17 @@ export const getClassIcon = (classType: number): string => {
   const icons = ['⚔️', '🔮', '🏹', '🗡️', '✨'];
   return icons[classType] || icons[0];
 };
+
+// 游戏常量
+export const GAME_CONSTANTS = {
+  RARITY_NAMES: ['Common', 'Rare', 'Epic', 'Legendary'],
+  CLASS_NAMES: ['Warrior', 'Mage', 'Archer', 'Assassin', 'Priest'],
+  MINT_COSTS: {
+    0: 100,   // Common
+    1: 300,   // Rare
+    2: 800,   // Epic
+    3: 2000   // Legendary
+  },
+  LEVEL_UP_BASE_COST: 100,
+  MAX_LEVEL: 100,
+} as const;

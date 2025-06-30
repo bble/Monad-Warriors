@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { 
-  CONTRACT_ADDRESSES, 
-  GAME_CORE_ABI,
+import {
   GAME_CONSTANTS,
   getRarityColor,
-  getClassIcon 
+  getClassIcon
 } from '@/utils/web3Config';
+import {
+  CONTRACT_ADDRESSES,
+  GAME_CORE_ABI
+} from '@/utils/contractABI';
 
 interface BattleHero {
   tokenId: number;
