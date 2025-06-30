@@ -6,6 +6,7 @@ import { formatMWAR } from '@/utils/web3Config';
 import HeroCollection from '@/components/HeroCollection';
 import GameArena from '@/components/GameArena';
 import PlayerStats from '@/components/PlayerStats';
+import TokenFaucet from '@/components/TokenFaucet';
 import GameLobby from '@/components/GameLobby';
 import Leaderboard from '@/components/Leaderboard';
 import Equipment from '@/components/Equipment';
@@ -51,7 +52,7 @@ export default function Home() {
                 ⚔️ Monad Warriors
               </h1>
               <div className="text-sm text-gray-300">
-                <div>Network: Monad Testnet</div>
+                <div>Network: Monad</div>
                 {isConnected && ethBalance && (
                   <div>Balance: {parseFloat(ethBalance.formatted).toFixed(4)} MON</div>
                 )}
@@ -146,7 +147,14 @@ export default function Home() {
 
               {/* Tab Content */}
               <div className="min-h-[600px]">
-                {activeTab === 'heroes' && <HeroCollection />}
+                {activeTab === 'heroes' && (
+                  <>
+                    <div className="mb-6">
+                      <TokenFaucet />
+                    </div>
+                    <HeroCollection />
+                  </>
+                )}
                 {activeTab === 'equipment' && <Equipment />}
                 {activeTab === 'quests' && <Quests />}
                 {activeTab === 'lobby' && <GameLobby />}

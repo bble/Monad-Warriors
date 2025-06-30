@@ -33,13 +33,13 @@ export default function PlayerStats() {
     args: [address as `0x${string}`],
   }) as { data: bigint | undefined };
 
-  const totalBattles = playerStats ? Number(playerStats.totalBattles) : 0;
-  const wins = playerStats ? Number(playerStats.wins) : 0;
-  const losses = playerStats ? Number(playerStats.losses) : 0;
-  const draws = playerStats ? Number(playerStats.draws) : 0;
-  const totalRewards = playerStats ? playerStats.totalRewards : BigInt(0);
-  const winStreak = playerStats ? Number(playerStats.winStreak) : 0;
-  const maxWinStreak = playerStats ? Number(playerStats.maxWinStreak) : 0;
+  const totalBattles = playerStats?.totalBattles ? Number(playerStats.totalBattles) : 0;
+  const wins = playerStats?.wins ? Number(playerStats.wins) : 0;
+  const losses = playerStats?.losses ? Number(playerStats.losses) : 0;
+  const draws = playerStats?.draws ? Number(playerStats.draws) : 0;
+  const totalRewards = playerStats?.totalRewards || BigInt(0);
+  const winStreak = playerStats?.winStreak ? Number(playerStats.winStreak) : 0;
+  const maxWinStreak = playerStats?.maxWinStreak ? Number(playerStats.maxWinStreak) : 0;
 
   const achievements = [
     {
@@ -89,25 +89,25 @@ export default function PlayerStats() {
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="text-center">
             <div className="text-3xl font-bold text-blue-400 mb-2">
-              {totalBattles}
+              {totalBattles || 0}
             </div>
             <div className="text-gray-400">Total Battles</div>
           </div>
-          
+
           <div className="text-center">
             <div className="text-3xl font-bold text-green-400 mb-2">
-              {winRate ? `${winRate.toString()}%` : '0%'}
+              {winRate ? `${Number(winRate)}%` : totalBattles > 0 ? `${((wins / totalBattles) * 100).toFixed(1)}%` : '0%'}
             </div>
             <div className="text-gray-400">Win Rate</div>
           </div>
-          
+
           <div className="text-center">
             <div className="text-3xl font-bold text-yellow-400 mb-2">
-              {winStreak}
+              {winStreak || 0}
             </div>
             <div className="text-gray-400">Current Streak</div>
           </div>
-          
+
           <div className="text-center">
             <div className="text-3xl font-bold text-purple-400 mb-2">
               {formatMWAR(totalRewards)}
@@ -123,23 +123,23 @@ export default function PlayerStats() {
         
         <div className="grid md:grid-cols-3 gap-6">
           <div className="text-center p-4 bg-green-900/20 rounded-lg border border-green-500/30">
-            <div className="text-2xl font-bold text-green-400 mb-2">{wins}</div>
+            <div className="text-2xl font-bold text-green-400 mb-2">{wins || 0}</div>
             <div className="text-green-300">Victories</div>
             <div className="text-sm text-gray-400 mt-1">
               {totalBattles > 0 ? ((wins / totalBattles) * 100).toFixed(1) : 0}%
             </div>
           </div>
-          
+
           <div className="text-center p-4 bg-red-900/20 rounded-lg border border-red-500/30">
-            <div className="text-2xl font-bold text-red-400 mb-2">{losses}</div>
+            <div className="text-2xl font-bold text-red-400 mb-2">{losses || 0}</div>
             <div className="text-red-300">Defeats</div>
             <div className="text-sm text-gray-400 mt-1">
               {totalBattles > 0 ? ((losses / totalBattles) * 100).toFixed(1) : 0}%
             </div>
           </div>
-          
+
           <div className="text-center p-4 bg-yellow-900/20 rounded-lg border border-yellow-500/30">
-            <div className="text-2xl font-bold text-yellow-400 mb-2">{draws}</div>
+            <div className="text-2xl font-bold text-yellow-400 mb-2">{draws || 0}</div>
             <div className="text-yellow-300">Draws</div>
             <div className="text-sm text-gray-400 mt-1">
               {totalBattles > 0 ? ((draws / totalBattles) * 100).toFixed(1) : 0}%
@@ -154,7 +154,7 @@ export default function PlayerStats() {
         
         <div className="grid md:grid-cols-2 gap-6">
           <div className="text-center p-4 bg-orange-900/20 rounded-lg border border-orange-500/30">
-            <div className="text-2xl font-bold text-orange-400 mb-2">{winStreak}</div>
+            <div className="text-2xl font-bold text-orange-400 mb-2">{winStreak || 0}</div>
             <div className="text-orange-300">Current Win Streak</div>
             <div className="text-sm text-gray-400 mt-1">
               {winStreak > 0 ? '🔥 On fire!' : 'Start a new streak!'}
@@ -162,7 +162,7 @@ export default function PlayerStats() {
           </div>
           
           <div className="text-center p-4 bg-purple-900/20 rounded-lg border border-purple-500/30">
-            <div className="text-2xl font-bold text-purple-400 mb-2">{maxWinStreak}</div>
+            <div className="text-2xl font-bold text-purple-400 mb-2">{maxWinStreak || 0}</div>
             <div className="text-purple-300">Best Win Streak</div>
             <div className="text-sm text-gray-400 mt-1">
               Personal record

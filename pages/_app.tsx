@@ -6,6 +6,8 @@ import { WagmiProvider } from 'wagmi';
 import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
 import { config } from '@/utils/web3Config';
 import { useState } from 'react';
+import Web3Provider from '@/components/Web3Provider';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 export default function App({ Component, pageProps }: AppProps) {
   const [queryClient] = useState(() => new QueryClient({
@@ -17,12 +19,16 @@ export default function App({ Component, pageProps }: AppProps) {
   }));
 
   return (
-    <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>
-          <Component {...pageProps} />
-        </RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <ErrorBoundary>
+      <WagmiProvider config={config}>
+        <QueryClientProvider client={queryClient}>
+          <RainbowKitProvider>
+            <Web3Provider>
+              <Component {...pageProps} />
+            </Web3Provider>
+          </RainbowKitProvider>
+        </QueryClientProvider>
+      </WagmiProvider>
+    </ErrorBoundary>
   );
 }

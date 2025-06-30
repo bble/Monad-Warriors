@@ -63,7 +63,7 @@ contract MWARToken is ERC20, ERC20Burnable, Ownable, Pausable {
         _mint(_investorWallet, INVESTOR_ALLOCATION);
         _mint(_communityWallet, COMMUNITY_ALLOCATION);
         _mint(_ecosystemWallet, ECOSYSTEM_ALLOCATION);
-        
+
         emit TokensDistributed(_gameRewardsPool, GAME_REWARDS_ALLOCATION, "Game Rewards");
         emit TokensDistributed(_teamWallet, TEAM_ALLOCATION, "Team");
         emit TokensDistributed(_investorWallet, INVESTOR_ALLOCATION, "Investor");
@@ -155,5 +155,93 @@ contract MWARToken is ERC20, ERC20Burnable, Ownable, Pausable {
      */
     function isGameContract(address _contract) external view returns (bool) {
         return gameContracts[_contract];
+    }
+
+    // ============ 测试网水龙头功能 ============
+
+    // 每次领取的代币数量 (1000 MWAR)
+    uint256 public constant FAUCET_AMOUNT = 1000 * 10**18;
+
+    // 冷却时间 (24小时)
+    uint256 public constant COOLDOWN_TIME = 24 hours;
+
+    // 记录用户上次领取时间
+    mapping(address => uint256) public lastFaucetClaim;
+
+    // 水龙头事件
+    event FaucetClaimed(address indexed user, uint256 amount);
+
+    /**
+     * @dev 测试网水龙头 - 用户可以每24小时领取一次代币
+     */
+    function claimFromFaucet() external {
+        require(canClaimFromFaucet(msg.sender), "Must wait 24 hours between claims");
+        require(balanceOf(gameRewardsPool) >= FAUCET_AMOUNT, "Faucet is empty");
+
+        // 更新领取时间
+        lastFaucetClaim[msg.sender] = block.timestamp;
+
+        // 从游戏奖励池转账给用户
+        _transfer(gameRewardsPool, msg.sender, FAUCET_AMOUNT);
+
+        emit FaucetClaimed(msg.sender, FAUCET_AMOUNT);
+    }
+
+    /**
+     * @dev 检查用户是否可以从水龙头领取
+     */
+    function canClaimFromFaucet(address user) public view returns (bool) {
+        return block.timestamp >= lastFaucetClaim[user] + COOLDOWN_TIME;
+    }
+
+    /**
+     * @dev 获取用户下次可以领取的时间
+     */
+    function getNextFaucetClaimTime(address user) external view returns (uint256) {
+        if (canClaimFromFaucet(user)) {
+            return block.timestamp;
+        }
+        return lastFaucetClaim[user] + COOLDOWN_TIME;
+    }
+
+    /**
+     * @dev 获取距离下次领取的剩余时间（秒）
+     */
+    function getTimeUntilNextFaucetClaim(address user) external view returns (uint256) {
+        if (canClaimFromFaucet(user)) {
+            return 0;
+        }
+        return (lastFaucetClaim[user] + COOLDOWN_TIME) - block.timestamp;
+    }
+
+    /**
+     * @dev 管理员分发测试代币给用户
+     */
+    function distributeTestTokens(address to, uint256 amount) external onlyOwner {
+        require(to != address(0), "Cannot distribute to zero address");
+        require(amount > 0, "Amount must be greater than 0");
+        require(balanceOf(gameRewardsPool) >= amount, "Insufficient pool balance");
+
+        // 从游戏奖励池转账给用户
+        _transfer(gameRewardsPool, to, amount);
+
+        emit TokensDistributed(to, amount, "Test Distribution");
+    }
+
+    /**
+     * @dev 批量分发测试代币
+     */
+    function batchDistributeTestTokens(address[] calldata recipients, uint256[] calldata amounts) external onlyOwner {
+        require(recipients.length == amounts.length, "Arrays length mismatch");
+        require(recipients.length > 0, "Empty arrays");
+
+        for (uint256 i = 0; i < recipients.length; i++) {
+            require(recipients[i] != address(0), "Invalid recipient address");
+            require(amounts[i] > 0, "Invalid amount");
+            require(balanceOf(gameRewardsPool) >= amounts[i], "Insufficient pool balance");
+
+            _transfer(gameRewardsPool, recipients[i], amounts[i]);
+            emit TokensDistributed(recipients[i], amounts[i], "Batch Test Distribution");
+        }
     }
 }

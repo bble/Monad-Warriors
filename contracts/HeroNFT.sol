@@ -195,9 +195,47 @@ contract HeroNFT is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable, Pausabl
     function getHeroPower(uint256 tokenId) external view returns (uint256) {
         require(_ownerOf(tokenId) != address(0), "Hero does not exist");
         HeroAttributes memory hero = heroes[tokenId];
-        
+
         // 计算综合战斗力
         return hero.strength + hero.intelligence + hero.agility + hero.vitality + hero.luck;
+    }
+
+    /**
+     * @dev 批量获取用户的英雄ID
+     */
+    function getHerosByOwner(address owner) external view returns (uint256[] memory) {
+        uint256 balance = balanceOf(owner);
+        uint256[] memory heroIds = new uint256[](balance);
+
+        for (uint256 i = 0; i < balance; i++) {
+            heroIds[i] = tokenOfOwnerByIndex(owner, i);
+        }
+
+        return heroIds;
+    }
+
+    /**
+     * @dev 批量获取英雄属性
+     */
+    function getHeroesAttributes(uint256[] calldata tokenIds)
+        external view returns (HeroAttributes[] memory) {
+        HeroAttributes[] memory attributes = new HeroAttributes[](tokenIds.length);
+
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            require(_ownerOf(tokenIds[i]) != address(0), "Hero does not exist");
+            attributes[i] = heroes[tokenIds[i]];
+        }
+
+        return attributes;
+    }
+
+    /**
+     * @dev 更新英雄元数据URI
+     */
+    function updateTokenURI(uint256 tokenId, string memory newURI) external {
+        require(_ownerOf(tokenId) != address(0), "Hero does not exist");
+        require(ownerOf(tokenId) == msg.sender || msg.sender == owner(), "Not authorized");
+        _setTokenURI(tokenId, newURI);
     }
     
     /**

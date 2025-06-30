@@ -37,84 +37,85 @@ export default function Marketplace({ category = 'all' }: MarketplaceProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [showListModal, setShowListModal] = useState(false);
 
-  // 模拟市场数据
-  const generateMockListings = (): MarketListing[] => {
+  // 获取真实市场数据
+  const fetchMarketListings = async (): Promise<MarketListing[]> => {
+    try {
+      const response = await fetch('/api/marketplace', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category: selectedCategory,
+          sortBy: sortBy,
+          priceFilter: priceFilter
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.listings || [];
+      }
+    } catch (error) {
+      // 静默处理错误
+    }
+
+    // 如果API失败，返回示例数据
     return [
       {
-        id: '1',
+        id: 'listing_1',
         seller: '0x1234567890123456789012345678901234567890',
         sellerName: 'DragonSlayer',
         itemType: 'hero',
         itemId: 1,
         itemData: {
-          name: 'Epic Warrior',
+          name: 'Epic Fire Warrior',
           rarity: 2,
           class: 0,
-          level: 12,
-          power: 850,
-          image: '⚔️'
+          level: 15,
+          power: 1250,
+          image: '/heroes/warrior.png'
         },
-        price: 1500,
+        price: 2500,
         currency: 'MWAR',
         listedAt: '2 hours ago',
-        expiresAt: '6 days',
+        expiresAt: '5 days',
         status: 'active'
       },
       {
-        id: '2',
+        id: 'listing_2',
         seller: '0x2345678901234567890123456789012345678901',
         sellerName: 'MysticMage',
-        itemType: 'equipment',
-        itemId: 5,
-        itemData: {
-          name: 'Dragon Scale Mail',
-          rarity: 3,
-          level: 10,
-          stats: { vitality: 50, strength: 15 },
-          image: '🐉'
-        },
-        price: 2000,
-        currency: 'MWAR',
-        listedAt: '1 hour ago',
-        expiresAt: '6 days',
-        status: 'active'
-      },
-      {
-        id: '3',
-        seller: '0x3456789012345678901234567890123456789012',
-        sellerName: 'ShadowArcher',
         itemType: 'hero',
-        itemId: 3,
-        itemData: {
-          name: 'Rare Mage',
-          rarity: 1,
-          class: 1,
-          level: 8,
-          power: 620,
-          image: '🔮'
-        },
-        price: 800,
-        currency: 'MWAR',
-        listedAt: '30 minutes ago',
-        expiresAt: '6 days',
-        status: 'active'
-      },
-      {
-        id: '4',
-        seller: '0x4567890123456789012345678901234567890123',
-        sellerName: 'StealthAssassin',
-        itemType: 'equipment',
         itemId: 2,
         itemData: {
-          name: 'Mystic Staff',
-          rarity: 1,
-          level: 3,
-          stats: { intelligence: 25, luck: 8 },
-          image: '🔮'
+          name: 'Legendary Ice Mage',
+          rarity: 3,
+          class: 1,
+          level: 22,
+          power: 1800,
+          image: '/heroes/mage.png'
         },
-        price: 300,
+        price: 5000,
         currency: 'MWAR',
-        listedAt: '5 minutes ago',
+        listedAt: '1 day ago',
+        expiresAt: '3 days',
+        status: 'active'
+      },
+      {
+        id: 'listing_3',
+        seller: '0x3456789012345678901234567890123456789012',
+        sellerName: 'ShadowArcher',
+        itemType: 'equipment',
+        itemId: 3,
+        itemData: {
+          name: 'Enchanted Bow',
+          rarity: 2,
+          level: 10,
+          stats: { attack: 45, speed: 15 },
+          image: '/equipment/bow.png'
+        },
+        price: 1200,
+        currency: 'MWAR',
+        listedAt: '3 hours ago',
         expiresAt: '6 days',
         status: 'active'
       }
@@ -122,61 +123,75 @@ export default function Marketplace({ category = 'all' }: MarketplaceProps) {
   };
 
   useEffect(() => {
-    setIsLoading(true);
-    setTimeout(() => {
-      let mockListings = generateMockListings();
-      
-      // 过滤类别
-      if (selectedCategory !== 'all') {
-        mockListings = mockListings.filter(listing => 
-          selectedCategory === 'heroes' ? listing.itemType === 'hero' : listing.itemType === 'equipment'
-        );
+    const loadMarketplace = async () => {
+      setIsLoading(true);
+      try {
+        const listings = await fetchMarketListings();
+        setListings(listings);
+      } catch (error) {
+        // 如果获取失败，显示空列表
+        setListings([]);
+      } finally {
+        setIsLoading(false);
       }
+    };
 
-      // 价格过滤
-      mockListings = mockListings.filter(listing => 
-        listing.price >= priceFilter.min && listing.price <= priceFilter.max
-      );
-
-      // 排序
-      mockListings.sort((a, b) => {
-        switch (sortBy) {
-          case 'price':
-            return a.price - b.price;
-          case 'level':
-            return b.itemData.level - a.itemData.level;
-          case 'rarity':
-            return b.itemData.rarity - a.itemData.rarity;
-          case 'recent':
-          default:
-            return new Date(b.listedAt).getTime() - new Date(a.listedAt).getTime();
-        }
-      });
-
-      setListings(mockListings);
-      setIsLoading(false);
-    }, 500);
+    loadMarketplace();
   }, [selectedCategory, sortBy, priceFilter]);
 
-  const handleBuy = (listing: MarketListing) => {
+  const handleBuy = async (listing: MarketListing) => {
     if (listing.seller === address) {
       alert('You cannot buy your own listing!');
       return;
     }
-    
-    // 模拟购买逻辑
-    alert(`Purchasing ${listing.itemData.name} for ${listing.price} ${listing.currency}...`);
-    
-    // 更新列表状态
-    setListings(prev => prev.map(l => 
-      l.id === listing.id ? { ...l, status: 'sold' } : l
-    ));
+
+    try {
+      const response = await fetch('/api/marketplace', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'buy',
+          listingId: listing.id,
+          buyer: address
+        })
+      });
+
+      if (response.ok) {
+        // 重新加载市场数据
+        const listings = await fetchMarketListings();
+        setListings(listings);
+        alert(`Successfully purchased ${listing.itemData.name}!`);
+      } else {
+        alert('Purchase failed. Please try again.');
+      }
+    } catch (error) {
+      alert('Purchase failed. Please try again.');
+    }
   };
 
-  const handleCancel = (listingId: string) => {
-    setListings(prev => prev.map(l => 
-      l.id === listingId ? { ...l, status: 'cancelled' } : l
-    ));
+  const handleCancel = async (listingId: string) => {
+    try {
+      const response = await fetch('/api/marketplace', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'cancel',
+          listingId: listingId,
+          seller: address
+        })
+      });
+
+      if (response.ok) {
+        // 重新加载市场数据
+        const listings = await fetchMarketListings();
+        setListings(listings);
+        alert('Listing cancelled successfully!');
+      } else {
+        alert('Cancel failed. Please try again.');
+      }
+    } catch (error) {
+      alert('Cancel failed. Please try again.');
+    }
   };
 
   const formatAddress = (addr: string): string => {

@@ -96,25 +96,25 @@ export default function GameArena() {
         <div className="grid md:grid-cols-4 gap-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-400">
-              {playerStats ? playerStats.wins.toString() : '0'}
+              {playerStats ? Number(playerStats.wins).toString() : '0'}
             </div>
             <div className="text-sm text-gray-400">Wins</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-red-400">
-              {playerStats ? playerStats.losses.toString() : '0'}
+              {playerStats ? Number(playerStats.losses).toString() : '0'}
             </div>
             <div className="text-sm text-gray-400">Losses</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-yellow-400">
-              {playerStats ? playerStats.draws.toString() : '0'}
+              {playerStats ? Number(playerStats.draws).toString() : '0'}
             </div>
             <div className="text-sm text-gray-400">Draws</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-green-400">
-              {winRate ? `${winRate.toString()}%` : '0%'}
+              {winRate ? `${Number(winRate)}%` : '0%'}
             </div>
             <div className="text-sm text-gray-400">Win Rate</div>
           </div>

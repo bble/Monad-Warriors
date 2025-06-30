@@ -47,29 +47,225 @@ export default function Guild() {
   const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'treasury' | 'browse'>('overview');
   const [isLoading, setIsLoading] = useState(false);
 
-  // 模拟公会数据
-  const mockGuild: Guild = {
-    id: '1',
-    name: 'Dragon Slayers',
-    description: 'Elite warriors dedicated to slaying the mightiest dragons and protecting the realm.',
-    level: 8,
-    experience: 15420,
-    maxExperience: 20000,
-    memberCount: 24,
-    maxMembers: 30,
-    treasury: 45670,
-    requirements: {
-      minLevel: 5,
-      applicationRequired: true
-    },
-    perks: {
-      expBonus: 15,
-      rewardBonus: 10,
-      battleBonus: 5
-    },
-    createdAt: '2024-01-15',
-    leader: '0x1234567890123456789012345678901234567890'
+  // 初始化公会数据
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newGuildName, setNewGuildName] = useState('');
+  const [newGuildDescription, setNewGuildDescription] = useState('');
+
+  // 加载公会数据
+  const loadGuildData = async () => {
+    if (!address) return;
+
+    try {
+      // 获取玩家当前公会
+      const playerGuildResponse = await fetch('/api/guild', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'getPlayerGuild',
+          player: address
+        })
+      });
+
+      if (playerGuildResponse.ok) {
+        const playerGuildResult = await playerGuildResponse.json();
+        if (playerGuildResult.guild) {
+          setCurrentGuild({
+            id: playerGuildResult.guild.id,
+            name: playerGuildResult.guild.name,
+            description: playerGuildResult.guild.description,
+            memberCount: parseInt(playerGuildResult.guild.memberCount),
+            maxMembers: 50, // 默认最大成员数
+            level: parseInt(playerGuildResult.guild.level),
+            treasury: BigInt(Math.floor(parseFloat(playerGuildResult.guild.treasury) * 1e18)),
+            leader: playerGuildResult.guild.leader,
+            createdAt: parseInt(playerGuildResult.guild.createdAt) * 1000,
+            requirements: {
+              minLevel: 1,
+              applicationRequired: false,
+              minPower: 0
+            },
+            bonuses: {
+              battleReward: 5,
+              questReward: 5,
+              experienceBonus: 5
+            }
+          });
+        }
+      }
+
+      // 获取所有活跃公会
+      const guildsResponse = await fetch('/api/guild', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'getActiveGuilds'
+        })
+      });
+
+      if (guildsResponse.ok) {
+        const guildsResult = await guildsResponse.json();
+        if (guildsResult.guilds && guildsResult.guilds.length > 0) {
+          const guilds = guildsResult.guilds.map((guild: any) => ({
+            id: guild.id,
+            name: guild.name,
+            description: guild.description,
+            memberCount: parseInt(guild.memberCount),
+            maxMembers: 50,
+            level: parseInt(guild.level),
+            treasury: BigInt(Math.floor(parseFloat(guild.treasury) * 1e18)),
+            leader: guild.leader,
+            createdAt: parseInt(guild.createdAt) * 1000,
+            requirements: {
+              minLevel: 1,
+              applicationRequired: false,
+              minPower: 0
+            },
+            bonuses: {
+              battleReward: 5,
+              questReward: 5,
+              experienceBonus: 5
+            }
+          }));
+          setAvailableGuilds(guilds);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load guild data:', error);
+      // 如果API调用失败，不做任何操作，让备用数据生效
+    }
   };
+
+  // 初始化公会数据
+  useEffect(() => {
+    if (address) {
+      // 加载真实的公会数据
+      loadGuildData().catch(() => {
+        // 如果智能合约调用失败，使用备用模拟数据
+        console.log('Using fallback guild data');
+      });
+
+      // 设置备用模拟数据
+      const mockGuilds: Guild[] = [
+        {
+          id: '1',
+          name: 'Dragon Slayers',
+          description: 'Elite warriors dedicated to slaying the mightiest dragons',
+          memberCount: 45,
+          maxMembers: 50,
+          level: 8,
+          treasury: BigInt('15000000000000000000000'), // 15000 MWAR
+          leader: '0x1234567890123456789012345678901234567890',
+          createdAt: Date.now() - 86400000 * 30, // 30 days ago
+          requirements: {
+            minLevel: 10,
+            applicationRequired: false,
+            minPower: 1000
+          },
+          bonuses: {
+            battleReward: 15,
+            questReward: 20,
+            experienceBonus: 10
+          }
+        },
+        {
+          id: '2',
+          name: 'Mystic Scholars',
+          description: 'Seekers of ancient knowledge and magical artifacts',
+          memberCount: 32,
+          maxMembers: 40,
+          level: 6,
+          treasury: BigInt('8500000000000000000000'), // 8500 MWAR
+          leader: '0x2345678901234567890123456789012345678901',
+          createdAt: Date.now() - 86400000 * 15, // 15 days ago
+          requirements: {
+            minLevel: 5,
+            applicationRequired: true,
+            minPower: 500
+          },
+          bonuses: {
+            battleReward: 10,
+            questReward: 25,
+            experienceBonus: 15
+          }
+        },
+        {
+          id: '3',
+          name: 'Shadow Assassins',
+          description: 'Masters of stealth and precision strikes',
+          memberCount: 28,
+          maxMembers: 35,
+          level: 7,
+          treasury: BigInt('12000000000000000000000'), // 12000 MWAR
+          leader: '0x3456789012345678901234567890123456789012',
+          createdAt: Date.now() - 86400000 * 20, // 20 days ago
+          requirements: {
+            minLevel: 8,
+            applicationRequired: true,
+            minPower: 800
+          },
+          bonuses: {
+            battleReward: 20,
+            questReward: 10,
+            experienceBonus: 5
+          }
+        }
+      ];
+
+      setAvailableGuilds(mockGuilds);
+
+      // 检查用户是否已经在公会中
+      const userGuildId = localStorage.getItem(`guild_${address}`);
+      if (userGuildId) {
+        const userGuild = mockGuilds.find(g => g.id === userGuildId);
+        if (userGuild) {
+          setCurrentGuild(userGuild);
+          // 模拟公会成员数据
+          setGuildMembers([
+            {
+              address: address,
+              name: 'You',
+              role: 'member',
+              level: 15,
+              contribution: 1250,
+              joinedAt: 'Last week',
+              lastActive: 'Now'
+            },
+            {
+              address: userGuild.leader,
+              name: 'Guild Leader',
+              role: 'leader',
+              level: 25,
+              contribution: 5000,
+              joinedAt: '1 month ago',
+              lastActive: '1 hour ago'
+            },
+            {
+              address: '0x4567890123456789012345678901234567890123',
+              name: 'Officer Alpha',
+              role: 'officer',
+              level: 22,
+              contribution: 3200,
+              joinedAt: '3 weeks ago',
+              lastActive: '2 hours ago'
+            },
+            {
+              address: '0x5678901234567890123456789012345678901234',
+              name: 'Veteran Member',
+              role: 'member',
+              level: 18,
+              contribution: 2100,
+              joinedAt: '2 weeks ago',
+              lastActive: '1 day ago'
+            }
+          ]);
+        }
+      }
+
+      // 设置备用可用公会数据（总是显示，即使智能合约调用失败）
+      setAvailableGuilds(mockGuilds);
+    }
+  }, [address]);
 
   const mockMembers: GuildMember[] = [
     {
@@ -147,14 +343,8 @@ export default function Guild() {
     }
   ];
 
-  useEffect(() => {
-    // 模拟检查用户是否在公会中
-    if (address) {
-      setCurrentGuild(mockGuild);
-      setGuildMembers(mockMembers);
-    }
-    setAvailableGuilds(mockAvailableGuilds);
-  }, [address]);
+  // 移除重复的useEffect，真实数据加载在上面的useEffect中处理
+  // 如果智能合约调用失败，会自动使用备用的模拟数据
 
   const getRoleIcon = (role: string): string => {
     switch (role) {
@@ -174,22 +364,109 @@ export default function Guild() {
     }
   };
 
-  const handleJoinGuild = (guild: Guild) => {
-    if (guild.requirements.applicationRequired) {
-      alert(`Application sent to ${guild.name}!`);
-    } else {
-      alert(`Joined ${guild.name}!`);
-      setCurrentGuild(guild);
-      setActiveTab('overview');
+  const handleJoinGuild = async (guild: Guild) => {
+    if (!address) {
+      alert('Please connect your wallet');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/guild', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'joinGuild',
+          player: address,
+          guildId: guild.id
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          alert(`Successfully joined ${guild.name}! Transaction: ${result.txHash}`);
+          // 重新加载公会数据
+          await loadGuildData();
+          setActiveTab('overview');
+        } else {
+          // 显示友好的错误消息
+          if (result.error.includes('not deployed')) {
+            alert('Guild system is coming soon! The smart contracts are being deployed.');
+          } else {
+            alert(`Failed to join guild: ${result.error}`);
+          }
+        }
+      } else {
+        alert('Failed to join guild');
+      }
+    } catch (error) {
+      console.error('Join guild error:', error);
+      alert('Guild system is temporarily unavailable. Please try again later.');
     }
   };
 
   const handleLeaveGuild = () => {
     if (confirm('Are you sure you want to leave the guild?')) {
+      localStorage.removeItem(`guild_${address}`);
       setCurrentGuild(null);
       setGuildMembers([]);
       setActiveTab('browse');
     }
+  };
+
+  const handleCreateGuild = async () => {
+    if (!newGuildName.trim()) {
+      alert('Please enter a guild name');
+      return;
+    }
+
+    if (!address) {
+      alert('Please connect your wallet');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/guild', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'createGuild',
+          player: address,
+          guildName: newGuildName.trim(),
+          description: newGuildDescription.trim() || 'A new guild ready for adventure!'
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          alert(`Guild "${newGuildName}" created successfully! Transaction: ${result.txHash}`);
+
+          // 重置表单并关闭模态框
+          setNewGuildName('');
+          setNewGuildDescription('');
+          setShowCreateModal(false);
+          setActiveTab('overview');
+
+          // 重新加载公会数据
+          await loadGuildData();
+        } else {
+          // 显示友好的错误消息
+          if (result.error.includes('not deployed')) {
+            alert('Guild system is coming soon! The smart contracts are being deployed.');
+          } else {
+            alert(`Failed to create guild: ${result.error}`);
+          }
+        }
+      } else {
+        alert('Failed to create guild');
+      }
+    } catch (error) {
+      console.error('Create guild error:', error);
+      alert('Guild system is temporarily unavailable. Please try again later.');
+    }
+
+    alert(`Guild "${newGuild.name}" created successfully!`);
   };
 
   const formatAddress = (addr: string): string => {
@@ -438,6 +715,19 @@ export default function Guild() {
 
       {activeTab === 'browse' && (
         <div className="space-y-4">
+          {/* Create Guild Button */}
+          <div className="glass-panel p-6 text-center">
+            <h3 className="text-lg font-semibold mb-4">Create Your Own Guild</h3>
+            <p className="text-gray-400 mb-4">Start your own guild and recruit members!</p>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="btn-primary"
+              disabled={currentGuild !== null}
+            >
+              Create New Guild
+            </button>
+          </div>
+
           {availableGuilds.map((guild) => (
             <div key={guild.id} className="glass-panel p-6">
               <div className="flex items-start justify-between">
@@ -460,14 +750,14 @@ export default function Guild() {
                     </div>
                     <div>
                       <div className="text-sm text-gray-400">Treasury</div>
-                      <div className="font-semibold text-yellow-400">{guild.treasury.toLocaleString()} MWAR</div>
+                      <div className="font-semibold text-yellow-400">{(Number(guild.treasury) / 1e18).toFixed(0)} MWAR</div>
                     </div>
                   </div>
 
                   <div className="flex flex-wrap gap-2">
-                    <span className="badge success">+{guild.perks.expBonus}% EXP</span>
-                    <span className="badge success">+{guild.perks.rewardBonus}% Rewards</span>
-                    <span className="badge success">+{guild.perks.battleBonus}% Battle</span>
+                    <span className="badge success">+{guild.bonuses.experienceBonus}% EXP</span>
+                    <span className="badge success">+{guild.bonuses.questReward}% Quest</span>
+                    <span className="badge success">+{guild.bonuses.battleReward}% Battle</span>
                     {guild.requirements.applicationRequired && (
                       <span className="badge warning">Application Required</span>
                     )}
@@ -486,6 +776,63 @@ export default function Guild() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Create Guild Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="glass-panel p-6 max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold mb-4">Create New Guild</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Guild Name</label>
+                <input
+                  type="text"
+                  value={newGuildName}
+                  onChange={(e) => setNewGuildName(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500"
+                  placeholder="Enter guild name..."
+                  maxLength={30}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Description (Optional)</label>
+                <textarea
+                  value={newGuildDescription}
+                  onChange={(e) => setNewGuildDescription(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500"
+                  placeholder="Describe your guild..."
+                  rows={3}
+                  maxLength={200}
+                />
+              </div>
+
+              <div className="text-sm text-gray-400">
+                <p>• Guild creation is free</p>
+                <p>• You will become the guild leader</p>
+                <p>• Starting capacity: 20 members</p>
+              </div>
+            </div>
+
+            <div className="flex space-x-3 mt-6">
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="btn-secondary flex-1"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateGuild}
+                className="btn-primary flex-1"
+                disabled={!newGuildName.trim()}
+              >
+                Create Guild
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

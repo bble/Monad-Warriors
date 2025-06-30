@@ -32,29 +32,32 @@ export const config = getDefaultConfig({
   ssr: false, // 禁用SSR以避免构建问题
 });
 
-// Gas优化配置
+// Gas优化配置 - 节省测试币的gas设置
 export const GAS_CONFIG = {
-  // 推荐的gas价格 (1 gwei)
-  gasPrice: '1000000000',
+  // 推荐的gas价格 (15 gwei for Monad testnet)
+  gasPrice: '15000000000',
+  maxFeePerGas: '15000000000',
+  maxPriorityFeePerGas: '1000000000',
   // 不同操作的gas限制
   gasLimits: {
     transfer: 21000,
-    approve: 50000,
-    mintHero: 300000,
-    levelUp: 150000,
-    battle: 200000,
+    approve: 100000,
+    mintHero: 500000,
+    levelUp: 200000,
+    battle: 300000,
   },
 } as const;
 
 // 合约地址 - 已部署的真实地址
 export const CONTRACT_ADDRESSES = {
-  MWAR_TOKEN: process.env.NEXT_PUBLIC_MWAR_TOKEN_ADDRESS || '0xD2f5d0418577BBCC98aAc97807e433dd091C1Be8',
-  HERO_NFT: process.env.NEXT_PUBLIC_HERO_NFT_ADDRESS || '0xcD7Cd65d4bE940280B752e10C3eEb6D6cF53B18D',
-  GAME_CORE: process.env.NEXT_PUBLIC_GAME_CORE_ADDRESS || '0xecde73957F1c15cE2E225fA4F485ABE03fcC7E48',
+  MWAR_TOKEN: process.env.NEXT_PUBLIC_MWAR_TOKEN_ADDRESS || '0xa200561a8e6325fD24AE767c1701F2d1Aa3860e1',
+  HERO_NFT: process.env.NEXT_PUBLIC_HERO_NFT_ADDRESS || '0x01Eb7582f8cf98EeB5bd7F0aCfC8DACCeeD18F96',
+  GAME_CORE: process.env.NEXT_PUBLIC_GAME_CORE_ADDRESS || '0x935e44C9fAc29E17AcE3E5AB047D8027E6E1A101',
 } as const;
 
 // 工具函数
-export const formatMWAR = (amount: bigint): string => {
+export const formatMWAR = (amount: bigint | undefined | null): string => {
+  if (!amount) return '0.00';
   return (Number(amount) / 1e18).toFixed(2);
 };
 

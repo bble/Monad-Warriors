@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useAccount } from 'wagmi';
 import { useGameSync } from '../hooks/useGameSync';
 import { GAME_CONSTANTS, getClassIcon, getRarityColor } from '@/utils/web3Config';
 
 export default function GameLobby() {
+  const { address } = useAccount();
   const {
     isConnected,
     onlinePlayers,
@@ -19,13 +21,81 @@ export default function GameLobby() {
   const [selectedHeroId, setSelectedHeroId] = useState<number>(1);
   const [challengeTarget, setChallengeTarget] = useState<string>('');
   const [battleAction, setBattleAction] = useState<'attack' | 'defend' | 'special'>('attack');
+  const [userHeroes, setUserHeroes] = useState<any[]>([]);
 
-  // 模拟英雄数据
-  const mockHeroes = [
-    { tokenId: 1, rarity: 1, class: 0, level: 5, power: 450 },
-    { tokenId: 2, rarity: 0, class: 1, level: 3, power: 380 },
-    { tokenId: 3, rarity: 2, class: 2, level: 8, power: 620 },
-  ];
+  // 获取用户的英雄数据
+  useEffect(() => {
+    const fetchUserHeroes = async () => {
+      if (!address) return;
+
+      try {
+        const response = await fetch('/api/heroes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'getBalance',
+            owner: address
+          })
+        });
+
+        if (response.ok) {
+          const { balance } = await response.json();
+          const heroList = [];
+
+          // 获取每个英雄的详细信息
+          for (let i = 0; i < Math.min(Number(balance), 10); i++) { // 限制最多10个英雄
+            try {
+              const tokenResponse = await fetch('/api/heroes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'getTokenByIndex',
+                  owner: address,
+                  index: i
+                })
+              });
+
+              if (tokenResponse.ok) {
+                const { tokenId } = await tokenResponse.json();
+
+                const attrResponse = await fetch('/api/heroes', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    action: 'getAttributes',
+                    tokenId: tokenId
+                  })
+                });
+
+                if (attrResponse.ok) {
+                  const { attributes } = await attrResponse.json();
+                  heroList.push({
+                    tokenId: Number(tokenId),
+                    rarity: Number(attributes.rarity),
+                    class: Number(attributes.class),
+                    level: Number(attributes.level),
+                    power: Number(attributes.strength) + Number(attributes.intelligence) +
+                           Number(attributes.agility) + Number(attributes.vitality) + Number(attributes.luck)
+                  });
+                }
+              }
+            } catch (error) {
+              continue;
+            }
+          }
+
+          setUserHeroes(heroList);
+          if (heroList.length > 0) {
+            setSelectedHeroId(heroList[0].tokenId);
+          }
+        }
+      } catch (error) {
+        // 静默处理错误
+      }
+    };
+
+    fetchUserHeroes();
+  }, [address]);
 
   const handleJoinLobby = () => {
     joinGame(selectedHeroId);
@@ -79,7 +149,7 @@ export default function GameLobby() {
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2">Select Your Hero</label>
             <div className="grid md:grid-cols-3 gap-4">
-              {mockHeroes.map((hero) => (
+              {userHeroes.map((hero) => (
                 <button
                   key={hero.tokenId}
                   onClick={() => setSelectedHeroId(hero.tokenId)}
@@ -134,7 +204,7 @@ export default function GameLobby() {
             
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <span className="text-2xl">{getClassIcon(mockHeroes.find(h => h.tokenId === playerState.heroId)?.class || 0)}</span>
+                <span className="text-2xl">{getClassIcon(userHeroes.find(h => h.tokenId === playerState.heroId)?.class || 0)}</span>
                 <div>
                   <div className="font-semibold">Your Hero</div>
                   <div className="text-sm text-gray-400">
@@ -187,7 +257,7 @@ export default function GameLobby() {
                       className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg"
                     >
                       <div className="flex items-center space-x-3">
-                        <span className="text-xl">{getClassIcon(mockHeroes.find(h => h.tokenId === player.heroId)?.class || 0)}</span>
+                        <span className="text-xl">{getClassIcon(userHeroes.find(h => h.tokenId === player.heroId)?.class || 0)}</span>
                         <div>
                           <div className="font-mono text-sm">
                             {player.address.slice(0, 6)}...{player.address.slice(-4)}

@@ -164,7 +164,7 @@ contract GameCore is Ownable, Pausable, ReentrancyGuard {
         // 添加随机因素 (基于区块哈希)
         uint256 randomFactor = uint256(keccak256(abi.encodePacked(
             block.timestamp,
-            block.difficulty,
+            block.prevrandao,
             hero1Id,
             hero2Id
         ))) % 100;
@@ -283,13 +283,63 @@ contract GameCore is Ownable, Pausable, ReentrancyGuard {
      * @dev 更新排行榜
      */
     function _updateLeaderboard(address player) internal {
-        // 简化的排行榜更新逻辑
-        // 实际实现中可能需要更复杂的排序算法
         PlayerStats memory stats = playerStats[player];
-        if (stats.totalBattles >= 10) { // 至少10场战斗才能上榜
-            // 这里可以实现更复杂的排行榜逻辑
-            emit LeaderboardUpdated(player, 0);
+        if (stats.totalBattles < 10) return; // 至少10场战斗才能上榜
+
+        uint256 winRate = (stats.wins * 100) / stats.totalBattles;
+
+        // 检查是否已在排行榜中
+        bool inLeaderboard = false;
+        uint256 playerIndex = 0;
+
+        for (uint256 i = 0; i < leaderboard.length; i++) {
+            if (leaderboard[i] == player) {
+                inLeaderboard = true;
+                playerIndex = i;
+                break;
+            }
         }
+
+        if (!inLeaderboard && leaderboard.length < LEADERBOARD_SIZE) {
+            // 添加到排行榜末尾
+            leaderboard.push(player);
+            playerIndex = leaderboard.length - 1;
+        } else if (!inLeaderboard) {
+            // 排行榜已满，检查是否能替换最后一名
+            address lastPlayer = leaderboard[LEADERBOARD_SIZE - 1];
+            PlayerStats memory lastStats = playerStats[lastPlayer];
+            uint256 lastWinRate = lastStats.totalBattles > 0 ?
+                (lastStats.wins * 100) / lastStats.totalBattles : 0;
+
+            if (winRate > lastWinRate) {
+                leaderboard[LEADERBOARD_SIZE - 1] = player;
+                playerIndex = LEADERBOARD_SIZE - 1;
+            } else {
+                return; // 不够资格进入排行榜
+            }
+        }
+
+        // 向上冒泡排序
+        for (uint256 i = playerIndex; i > 0; i--) {
+            address currentPlayer = leaderboard[i];
+            address prevPlayer = leaderboard[i - 1];
+
+            PlayerStats memory currentStats = playerStats[currentPlayer];
+            PlayerStats memory prevStats = playerStats[prevPlayer];
+
+            uint256 currentWinRate = (currentStats.wins * 100) / currentStats.totalBattles;
+            uint256 prevWinRate = prevStats.totalBattles > 0 ?
+                (prevStats.wins * 100) / prevStats.totalBattles : 0;
+
+            if (currentWinRate > prevWinRate) {
+                leaderboard[i] = prevPlayer;
+                leaderboard[i - 1] = currentPlayer;
+            } else {
+                break;
+            }
+        }
+
+        emit LeaderboardUpdated(player, playerIndex);
     }
     
     /**
@@ -333,5 +383,94 @@ contract GameCore is Ownable, Pausable, ReentrancyGuard {
      */
     function unpause() external onlyOwner {
         _unpause();
+    }
+
+    /**
+     * @dev 获取排行榜
+     */
+    function getLeaderboard() external view returns (address[] memory) {
+        return leaderboard;
+    }
+
+    /**
+     * @dev 获取排行榜前N名
+     */
+    function getTopPlayers(uint256 count) external view returns (address[] memory) {
+        uint256 length = count > leaderboard.length ? leaderboard.length : count;
+        address[] memory topPlayers = new address[](length);
+
+        for (uint256 i = 0; i < length; i++) {
+            topPlayers[i] = leaderboard[i];
+        }
+
+        return topPlayers;
+    }
+
+    /**
+     * @dev 获取玩家排名
+     */
+    function getPlayerRank(address player) external view returns (uint256) {
+        for (uint256 i = 0; i < leaderboard.length; i++) {
+            if (leaderboard[i] == player) {
+                return i + 1; // 排名从1开始
+            }
+        }
+        return 0; // 未上榜
+    }
+
+    /**
+     * @dev 批量获取玩家统计
+     */
+    function getPlayersStats(address[] calldata players)
+        external view returns (PlayerStats[] memory) {
+        PlayerStats[] memory stats = new PlayerStats[](players.length);
+
+        for (uint256 i = 0; i < players.length; i++) {
+            stats[i] = playerStats[players[i]];
+        }
+
+        return stats;
+    }
+
+    /**
+     * @dev 获取最近的战斗记录
+     */
+    function getRecentBattles(uint256 count) external view returns (BattleRecord[] memory) {
+        uint256 length = count > battleHistory.length ? battleHistory.length : count;
+        BattleRecord[] memory recentBattles = new BattleRecord[](length);
+
+        for (uint256 i = 0; i < length; i++) {
+            recentBattles[i] = battleHistory[battleHistory.length - 1 - i];
+        }
+
+        return recentBattles;
+    }
+
+    /**
+     * @dev 获取玩家的战斗记录
+     */
+    function getPlayerBattles(address player, uint256 count)
+        external view returns (BattleRecord[] memory) {
+        // 先计算玩家参与的战斗数量
+        uint256 playerBattleCount = 0;
+        for (uint256 i = 0; i < battleHistory.length; i++) {
+            if (battleHistory[i].player1 == player || battleHistory[i].player2 == player) {
+                playerBattleCount++;
+            }
+        }
+
+        uint256 length = count > playerBattleCount ? playerBattleCount : count;
+        BattleRecord[] memory playerBattles = new BattleRecord[](length);
+
+        uint256 found = 0;
+        // 从最新的战斗开始查找
+        for (uint256 i = battleHistory.length; i > 0 && found < length; i--) {
+            if (battleHistory[i-1].player1 == player || battleHistory[i-1].player2 == player) {
+                playerBattles[found] = battleHistory[i-1];
+                found++;
+            }
+        }
+
+        return playerBattles;
     }
 }

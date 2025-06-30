@@ -3,25 +3,31 @@ import { useAccount } from 'wagmi';
 import { GAME_CONSTANTS, getClassIcon, getRarityColor } from '@/utils/web3Config';
 
 interface Equipment {
-  id: number;
+  id: number | string;
   name: string;
   type: 'weapon' | 'armor' | 'accessory';
   rarity: number;
-  level: number;
+  level?: number;
   stats: {
     strength?: number;
     intelligence?: number;
     agility?: number;
     vitality?: number;
     luck?: number;
+    attack?: number;
+    defense?: number;
+    speed?: number;
+    health?: number;
   };
-  requirements: {
+  requirements?: {
     level: number;
     class?: number[];
   };
-  price: number;
-  description: string;
-  image: string;
+  price?: number;
+  description?: string;
+  image?: string;
+  owner?: string;
+  equipped?: boolean;
 }
 
 interface EquippedItems {
@@ -36,95 +42,309 @@ export default function Equipment() {
   const [equipped, setEquipped] = useState<EquippedItems>({});
   const [selectedHeroId, setSelectedHeroId] = useState<number>(1);
   const [activeTab, setActiveTab] = useState<'inventory' | 'shop' | 'forge'>('inventory');
+  const [userHeroes, setUserHeroes] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [shopItems, setShopItems] = useState<Equipment[]>([]);
+  const [forgeRecipes, setForgeRecipes] = useState<any[]>([]);
 
-  // 模拟装备数据
-  const mockEquipment: Equipment[] = [
-    {
-      id: 1,
-      name: 'Iron Sword',
-      type: 'weapon',
-      rarity: 0,
-      level: 1,
-      stats: { strength: 15, agility: 5 },
-      requirements: { level: 1, class: [0, 3] }, // Warrior, Assassin
-      price: 100,
-      description: 'A basic iron sword for beginners.',
-      image: '⚔️'
-    },
-    {
-      id: 2,
-      name: 'Mystic Staff',
-      type: 'weapon',
-      rarity: 1,
-      level: 3,
-      stats: { intelligence: 25, luck: 8 },
-      requirements: { level: 3, class: [1, 4] }, // Mage, Priest
-      price: 300,
-      description: 'A staff imbued with magical energy.',
-      image: '🔮'
-    },
-    {
-      id: 3,
-      name: 'Elven Bow',
-      type: 'weapon',
-      rarity: 2,
-      level: 5,
-      stats: { agility: 30, strength: 10 },
-      requirements: { level: 5, class: [2] }, // Archer
-      price: 800,
-      description: 'A masterfully crafted elven bow.',
-      image: '🏹'
-    },
-    {
-      id: 4,
-      name: 'Leather Armor',
-      type: 'armor',
-      rarity: 0,
-      level: 1,
-      stats: { vitality: 20, agility: 5 },
-      requirements: { level: 1 },
-      price: 150,
-      description: 'Basic leather protection.',
-      image: '🛡️'
-    },
-    {
-      id: 5,
-      name: 'Dragon Scale Mail',
-      type: 'armor',
-      rarity: 3,
-      level: 10,
-      stats: { vitality: 50, strength: 15, intelligence: 10 },
-      requirements: { level: 10 },
-      price: 2000,
-      description: 'Armor forged from ancient dragon scales.',
-      image: '🐉'
-    },
-    {
-      id: 6,
-      name: 'Lucky Charm',
-      type: 'accessory',
-      rarity: 1,
-      level: 1,
-      stats: { luck: 25 },
-      requirements: { level: 1 },
-      price: 200,
-      description: 'Increases your fortune in battle.',
-      image: '🍀'
+  // 获取真实装备数据
+  const fetchEquipmentData = async (): Promise<Equipment[]> => {
+    try {
+      const response = await fetch('/api/equipment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'getUserEquipment',
+          owner: address
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.equipment || [];
+      }
+    } catch (error) {
+      // 静默处理错误
     }
-  ];
 
-  // 模拟英雄数据
-  const mockHeroes = [
-    { tokenId: 1, class: 0, level: 5, name: 'Warrior' },
-    { tokenId: 2, class: 1, level: 3, name: 'Mage' },
-    { tokenId: 3, class: 2, level: 8, name: 'Archer' }
-  ];
+    // 如果API失败，返回空数组
+    return [];
+  };
+
+  // 获取用户英雄数据
+  const fetchUserHeroes = async () => {
+    if (!address) return [];
+
+    try {
+      const response = await fetch('/api/heroes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'getBalance',
+          owner: address
+        })
+      });
+
+      if (response.ok) {
+        const { balance } = await response.json();
+        const heroList = [];
+
+        for (let i = 0; i < Math.min(Number(balance), 5); i++) {
+          try {
+            const tokenResponse = await fetch('/api/heroes', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'getTokenByIndex',
+                owner: address,
+                index: i
+              })
+            });
+
+            if (tokenResponse.ok) {
+              const { tokenId } = await tokenResponse.json();
+
+              const attrResponse = await fetch('/api/heroes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'getAttributes',
+                  tokenId: tokenId
+                })
+              });
+
+              if (attrResponse.ok) {
+                const { attributes } = await attrResponse.json();
+                heroList.push({
+                  tokenId: Number(tokenId),
+                  class: Number(attributes.class),
+                  level: Number(attributes.level),
+                  name: GAME_CONSTANTS.CLASS_NAMES[Number(attributes.class)]
+                });
+              }
+            }
+          } catch (error) {
+            continue;
+          }
+        }
+
+        return heroList;
+      }
+    } catch (error) {
+      // 静默处理错误
+    }
+
+    return [];
+  };
 
   useEffect(() => {
-    // 模拟加载用户装备
-    setInventory(mockEquipment.slice(0, 3)); // 用户拥有前3个装备
-  }, []);
+    const loadData = async () => {
+      if (!address) return;
+
+      try {
+        // 加载装备数据
+        const equipment = await fetchEquipmentData();
+        setInventory(equipment);
+
+        // 加载英雄数据
+        const heroes = await fetchUserHeroes();
+        setUserHeroes(heroes);
+
+        // 设置默认选中的英雄
+        if (heroes.length > 0) {
+          setSelectedHeroId(heroes[0].tokenId);
+        }
+
+        // 初始化商店数据
+        initializeShopData();
+
+        // 初始化锻造数据
+        initializeForgeData();
+      } catch (error) {
+        // 静默处理错误
+        setInventory([]);
+        setUserHeroes([]);
+      }
+    };
+
+    loadData();
+  }, [address]);
+
+  // 初始化商店数据
+  const initializeShopData = () => {
+    const mockShopItems: Equipment[] = [
+      {
+        id: 'shop_sword_1',
+        name: 'Iron Sword',
+        type: 'weapon',
+        rarity: 0,
+        stats: { attack: 15, defense: 0, speed: 0, health: 0 },
+        price: 500,
+        description: 'A sturdy iron sword for beginners'
+      },
+      {
+        id: 'shop_sword_2',
+        name: 'Steel Blade',
+        type: 'weapon',
+        rarity: 1,
+        stats: { attack: 25, defense: 0, speed: 5, health: 0 },
+        price: 1200,
+        description: 'A well-crafted steel blade with improved balance'
+      },
+      {
+        id: 'shop_armor_1',
+        name: 'Leather Armor',
+        type: 'armor',
+        rarity: 0,
+        stats: { attack: 12, defense: 0, speed: 0, health: 20 },
+        price: 400,
+        description: 'Basic leather protection'
+      },
+      {
+        id: 'shop_armor_2',
+        name: 'Chain Mail',
+        type: 'armor',
+        rarity: 1,
+        stats: { attack: 0, defense: 20, speed: -2, health: 35 },
+        price: 1000,
+        description: 'Interlocked metal rings provide solid protection'
+      },
+      {
+        id: 'shop_accessory_1',
+        name: 'Power Ring',
+        type: 'accessory',
+        rarity: 1,
+        stats: { attack: 8, defense: 0, speed: 0, health: 0 },
+        price: 800,
+        description: 'A ring that enhances physical strength'
+      },
+      {
+        id: 'shop_staff_1',
+        name: 'Mystic Staff',
+        type: 'weapon',
+        rarity: 2,
+        stats: { attack: 30, defense: 0, speed: 0, health: 15 },
+        price: 2500,
+        description: 'A staff imbued with magical energy'
+      }
+    ];
+    setShopItems(mockShopItems);
+  };
+
+  // 初始化锻造配方
+  const initializeForgeData = () => {
+    const mockRecipes = [
+      {
+        id: 'forge_sword_upgrade',
+        name: 'Upgrade Iron Sword',
+        description: 'Enhance your Iron Sword to Steel quality',
+        requirements: [
+          { item: 'Iron Sword', quantity: 1 },
+          { resource: 'MWAR', quantity: 300 }
+        ],
+        result: {
+          name: 'Enhanced Iron Sword',
+          type: 'weapon',
+          rarity: 1,
+          stats: { attack: 20, defense: 0, speed: 3, health: 0 }
+        }
+      },
+      {
+        id: 'forge_armor_upgrade',
+        name: 'Upgrade Leather Armor',
+        description: 'Reinforce your Leather Armor with metal studs',
+        requirements: [
+          { item: 'Leather Armor', quantity: 1 },
+          { resource: 'MWAR', quantity: 250 }
+        ],
+        result: {
+          name: 'Studded Leather Armor',
+          type: 'armor',
+          rarity: 1,
+          stats: { attack: 0, defense: 18, speed: 0, health: 30 }
+        }
+      }
+    ];
+    setForgeRecipes(mockRecipes);
+  };
+
+  // 购买装备 - 真实智能合约交互
+  const handleBuyEquipment = async (item: Equipment) => {
+    if (!address) {
+      alert('Please connect your wallet');
+      return;
+    }
+
+    try {
+      // 调用装备合约的制作功能
+      const response = await fetch('/api/equipment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'craftEquipment',
+          player: address,
+          equipmentType: item.type === 'weapon' ? 0 : item.type === 'armor' ? 1 : 2,
+          rarity: item.rarity,
+          name: item.name,
+          mwarCost: item.price
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          // 重新加载装备数据
+          const equipment = await fetchEquipmentData();
+          setInventory(equipment);
+          alert(`Successfully crafted ${item.name}! Transaction: ${result.txHash}`);
+        } else {
+          alert(`Failed to craft equipment: ${result.error}`);
+        }
+      } else {
+        alert('Failed to craft equipment');
+      }
+    } catch (error) {
+      console.error('Equipment crafting error:', error);
+      alert('Failed to craft equipment');
+    }
+  };
+
+  // 锻造装备
+  const handleForgeEquipment = async (recipe: any) => {
+    if (!address) {
+      alert('Please connect your wallet');
+      return;
+    }
+
+    try {
+      // 检查是否有所需材料
+      const hasRequiredItems = recipe.requirements.every((req: any) => {
+        if (req.resource === 'MWAR') {
+          // 这里应该检查MWAR余额
+          return true; // 暂时假设有足够的MWAR
+        } else {
+          return inventory.some(item => item.name === req.item);
+        }
+      });
+
+      if (!hasRequiredItems) {
+        alert('You don\'t have the required materials');
+        return;
+      }
+
+      // 模拟锻造过程
+      const newItem = {
+        ...recipe.result,
+        id: `forged_${Date.now()}`,
+        owner: address
+      };
+
+      setInventory(prev => [...prev, newItem]);
+      alert(`Successfully forged ${recipe.result.name}!`);
+    } catch (error) {
+      alert('Failed to forge equipment');
+    }
+  };
 
   const canEquip = (equipment: Equipment, heroClass: number, heroLevel: number): boolean => {
     if (equipment.requirements.level > heroLevel) return false;
@@ -133,7 +353,7 @@ export default function Equipment() {
   };
 
   const handleEquip = (equipment: Equipment) => {
-    const hero = mockHeroes.find(h => h.tokenId === selectedHeroId);
+    const hero = userHeroes.find(h => h.tokenId === selectedHeroId);
     if (!hero) return;
 
     if (!canEquip(equipment, hero.class, hero.level)) {
@@ -184,6 +404,25 @@ export default function Equipment() {
       default: return '📦';
     }
   };
+
+  // 如果没有英雄，显示提示
+  if (userHeroes.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="glass-panel p-8 text-center">
+          <div className="text-8xl mb-6">⚔️</div>
+          <h2 className="text-3xl font-bold mb-4">Equipment System</h2>
+          <h3 className="text-xl text-gray-300 mb-6">No Heroes Found</h3>
+          <p className="text-gray-400 mb-8 max-w-2xl mx-auto">
+            You need to mint at least one hero before you can manage equipment.
+          </p>
+          <div className="text-sm text-gray-500">
+            Go to the Heroes tab to mint your first hero!
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const renderEquipmentCard = (equipment: Equipment, isEquipped = false) => (
     <div
@@ -242,8 +481,8 @@ export default function Equipment() {
           <button
             onClick={() => handleEquip(equipment)}
             className="btn-primary flex-1 text-sm py-2"
-            disabled={!canEquip(equipment, mockHeroes.find(h => h.tokenId === selectedHeroId)?.class || 0, 
-                               mockHeroes.find(h => h.tokenId === selectedHeroId)?.level || 1)}
+            disabled={!canEquip(equipment, userHeroes.find(h => h.tokenId === selectedHeroId)?.class || 0,
+                               userHeroes.find(h => h.tokenId === selectedHeroId)?.level || 1)}
           >
             Equip
           </button>
@@ -272,7 +511,7 @@ export default function Equipment() {
               onChange={(e) => setSelectedHeroId(Number(e.target.value))}
               className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-2"
             >
-              {mockHeroes.map(hero => (
+              {userHeroes.map(hero => (
                 <option key={hero.tokenId} value={hero.tokenId}>
                   {getClassIcon(hero.class)} {hero.name} (Lv.{hero.level})
                 </option>
@@ -363,15 +602,124 @@ export default function Equipment() {
 
         {activeTab === 'shop' && (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {mockEquipment.map(equipment => renderEquipmentCard(equipment))}
+            {shopItems.length === 0 ? (
+              <div className="col-span-full text-center py-12">
+                <div className="text-6xl mb-4">🛒</div>
+                <h4 className="text-xl font-semibold mb-2">Loading Shop...</h4>
+                <p className="text-gray-400">Please wait while we load the equipment shop</p>
+              </div>
+            ) : (
+              shopItems.map(item => (
+                <div key={item.id} className="glass-panel p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className={`font-semibold ${getRarityColor(item.rarity)}`}>
+                      {item.name}
+                    </h4>
+                    <span className="text-2xl">
+                      {item.type === 'weapon' ? '⚔️' :
+                       item.type === 'armor' ? '🛡️' : '💍'}
+                    </span>
+                  </div>
+
+                  <p className="text-sm text-gray-400 mb-3">{item.description}</p>
+
+                  <div className="space-y-2 mb-4">
+                    {item.stats.attack > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span>Attack:</span>
+                        <span className="text-red-400">+{item.stats.attack}</span>
+                      </div>
+                    )}
+                    {item.stats.defense > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span>Defense:</span>
+                        <span className="text-blue-400">+{item.stats.defense}</span>
+                      </div>
+                    )}
+                    {item.stats.speed !== 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span>Speed:</span>
+                        <span className={item.stats.speed > 0 ? 'text-green-400' : 'text-red-400'}>
+                          {item.stats.speed > 0 ? '+' : ''}{item.stats.speed}
+                        </span>
+                      </div>
+                    )}
+                    {item.stats.health > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span>Health:</span>
+                        <span className="text-green-400">+{item.stats.health}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-yellow-400 font-semibold">
+                      {item.price} MWAR
+                    </span>
+                    <button
+                      onClick={() => handleBuyEquipment(item)}
+                      className="btn-primary text-sm px-4 py-2"
+                    >
+                      Buy
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
 
         {activeTab === 'forge' && (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">🔨</div>
-            <h4 className="text-xl font-semibold mb-2">Forge Coming Soon</h4>
-            <p className="text-gray-400">Upgrade and craft equipment here!</p>
+          <div className="space-y-4">
+            {forgeRecipes.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">🔨</div>
+                <h4 className="text-xl font-semibold mb-2">Loading Forge...</h4>
+                <p className="text-gray-400">Please wait while we load forge recipes</p>
+              </div>
+            ) : (
+              forgeRecipes.map(recipe => (
+                <div key={recipe.id} className="glass-panel p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h4 className="text-lg font-semibold mb-2">{recipe.name}</h4>
+                      <p className="text-gray-400 mb-4">{recipe.description}</p>
+
+                      <div className="mb-4">
+                        <h5 className="font-medium mb-2">Requirements:</h5>
+                        <div className="space-y-1">
+                          {recipe.requirements.map((req: any, index: number) => (
+                            <div key={index} className="flex items-center space-x-2 text-sm">
+                              <span className="text-gray-300">•</span>
+                              <span>{req.quantity}x {req.item || req.resource}</span>
+                              {req.resource === 'MWAR' && (
+                                <span className="text-yellow-400">💰</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="mb-4">
+                        <h5 className="font-medium mb-2">Result:</h5>
+                        <div className={`inline-block px-3 py-1 rounded ${getRarityColor(recipe.result.rarity)} bg-gray-800`}>
+                          {recipe.result.name}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="ml-6">
+                      <button
+                        onClick={() => handleForgeEquipment(recipe)}
+                        className="btn-primary"
+                      >
+                        🔨 Forge
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
       </div>

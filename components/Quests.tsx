@@ -1,39 +1,239 @@
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
-import { gameDataManager, Quest, QuestObjective } from '@/utils/gameData';
+
+interface Quest {
+  id: string;
+  title: string;
+  description: string;
+  type: 'daily' | 'weekly' | 'story' | 'event';
+  requirements: {
+    type: 'battle' | 'win' | 'mint' | 'collect' | 'level';
+    target: number;
+    current: number;
+  };
+  rewards: {
+    mwar?: number;
+    experience?: number;
+    items?: string[];
+  };
+  status: 'available' | 'in_progress' | 'completed' | 'claimed';
+  expiresAt?: string;
+  difficulty: 'easy' | 'medium' | 'hard' | 'epic';
+}
 
 export default function Quests() {
   const { address } = useAccount();
-  const [quests, setQuests] = useState<Quest[]>([]);
   const [activeTab, setActiveTab] = useState<'daily' | 'weekly' | 'story' | 'event'>('daily');
+  const [quests, setQuests] = useState<Quest[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // 初始化任务数据
   useEffect(() => {
-    loadQuests();
-  }, [activeTab]);
+    if (address) {
+      initializeQuests();
+    }
+  }, [address, activeTab]);
 
-  const loadQuests = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      const allQuests = gameDataManager.getQuests();
-      const filteredQuests = allQuests.filter(quest => quest.type === activeTab);
-      setQuests(filteredQuests);
-      setIsLoading(false);
-    }, 300);
+  const initializeQuests = () => {
+    const allQuests: Quest[] = [
+      // Daily Quests
+      {
+        id: 'daily_battle_1',
+        title: 'Daily Warrior',
+        description: 'Complete 3 battles today',
+        type: 'daily',
+        requirements: {
+          type: 'battle',
+          target: 3,
+          current: 1
+        },
+        rewards: {
+          mwar: 100,
+          experience: 50
+        },
+        status: 'in_progress',
+        expiresAt: '23:59 today',
+        difficulty: 'easy'
+      },
+      {
+        id: 'daily_win_1',
+        title: 'Victory Streak',
+        description: 'Win 2 battles in a row',
+        type: 'daily',
+        requirements: {
+          type: 'win',
+          target: 2,
+          current: 0
+        },
+        rewards: {
+          mwar: 150,
+          experience: 75
+        },
+        status: 'available',
+        expiresAt: '23:59 today',
+        difficulty: 'medium'
+      },
+      {
+        id: 'daily_mint_1',
+        title: 'Collector',
+        description: 'Mint a new hero',
+        type: 'daily',
+        requirements: {
+          type: 'mint',
+          target: 1,
+          current: 0
+        },
+        rewards: {
+          mwar: 200,
+          experience: 100
+        },
+        status: 'available',
+        expiresAt: '23:59 today',
+        difficulty: 'easy'
+      },
+      // Weekly Quests
+      {
+        id: 'weekly_battle_1',
+        title: 'Battle Master',
+        description: 'Complete 20 battles this week',
+        type: 'weekly',
+        requirements: {
+          type: 'battle',
+          target: 20,
+          current: 8
+        },
+        rewards: {
+          mwar: 1000,
+          experience: 500,
+          items: ['Rare Equipment Box']
+        },
+        status: 'in_progress',
+        expiresAt: 'Sunday 23:59',
+        difficulty: 'hard'
+      },
+      {
+        id: 'weekly_win_1',
+        title: 'Champion',
+        description: 'Win 15 battles this week',
+        type: 'weekly',
+        requirements: {
+          type: 'win',
+          target: 15,
+          current: 5
+        },
+        rewards: {
+          mwar: 1500,
+          experience: 750,
+          items: ['Epic Hero Fragment']
+        },
+        status: 'in_progress',
+        expiresAt: 'Sunday 23:59',
+        difficulty: 'epic'
+      },
+      // Story Quests
+      {
+        id: 'story_1',
+        title: 'The Beginning',
+        description: 'Mint your first hero and complete the tutorial',
+        type: 'story',
+        requirements: {
+          type: 'mint',
+          target: 1,
+          current: 1
+        },
+        rewards: {
+          mwar: 500,
+          experience: 200
+        },
+        status: 'completed',
+        difficulty: 'easy'
+      },
+      {
+        id: 'story_2',
+        title: 'First Victory',
+        description: 'Win your first battle',
+        type: 'story',
+        requirements: {
+          type: 'win',
+          target: 1,
+          current: 0
+        },
+        rewards: {
+          mwar: 300,
+          experience: 150,
+          items: ['Starter Equipment']
+        },
+        status: 'available',
+        difficulty: 'easy'
+      },
+      // Event Quests
+      {
+        id: 'event_1',
+        title: 'New Year Challenge',
+        description: 'Special event: Win 10 battles during the New Year event',
+        type: 'event',
+        requirements: {
+          type: 'win',
+          target: 10,
+          current: 3
+        },
+        rewards: {
+          mwar: 2000,
+          experience: 1000,
+          items: ['Legendary Hero Fragment', 'Event Badge']
+        },
+        status: 'in_progress',
+        expiresAt: 'Jan 31, 2025',
+        difficulty: 'epic'
+      }
+    ];
+
+    // 根据当前标签页过滤任务
+    const filteredQuests = allQuests.filter(quest => quest.type === activeTab);
+    setQuests(filteredQuests);
   };
 
-  const handleClaimReward = (questId: string) => {
-    const quest = quests.find(q => q.id === questId);
-    if (!quest) return;
+  // 领取任务奖励
+  const handleClaimReward = async (questId: string) => {
+    try {
+      // 这里应该调用智能合约领取奖励
+      // 现在先模拟领取过程
+      setQuests(prev => prev.map(quest =>
+        quest.id === questId
+          ? { ...quest, status: 'claimed' as const }
+          : quest
+      ));
 
-    // 模拟领取奖励
-    alert(`Claimed rewards: ${quest.rewards.mwar} MWAR, ${quest.rewards.experience} EXP!`);
-    
-    // 更新任务状态
-    setQuests(prev => prev.map(q => 
-      q.id === questId ? { ...q, status: 'completed' } : q
-    ));
+      const quest = quests.find(q => q.id === questId);
+      if (quest) {
+        let rewardText = '';
+        if (quest.rewards.mwar) rewardText += `${quest.rewards.mwar} MWAR `;
+        if (quest.rewards.experience) rewardText += `${quest.rewards.experience} EXP `;
+        if (quest.rewards.items) rewardText += quest.rewards.items.join(', ');
+
+        alert(`Rewards claimed: ${rewardText}`);
+      }
+    } catch (error) {
+      alert('Failed to claim rewards');
+    }
   };
+
+  // 开始任务
+  const handleStartQuest = async (questId: string) => {
+    try {
+      setQuests(prev => prev.map(quest =>
+        quest.id === questId
+          ? { ...quest, status: 'in_progress' as const }
+          : quest
+      ));
+
+      alert('Quest started! Check your progress in the quest log.');
+    } catch (error) {
+      alert('Failed to start quest');
+    }
+  };
+
+
 
   const getQuestTypeIcon = (type: string): string => {
     switch (type) {
@@ -48,9 +248,10 @@ export default function Quests() {
   const getObjectiveIcon = (type: string): string => {
     switch (type) {
       case 'battle': return '⚔️';
+      case 'win': return '🏆';
+      case 'mint': return '🎭';
       case 'collect': return '🎒';
       case 'level': return '⬆️';
-      case 'social': return '👥';
       default: return '📝';
     }
   };
@@ -60,11 +261,21 @@ export default function Quests() {
   };
 
   const isQuestCompleted = (quest: Quest): boolean => {
-    return quest.objectives.every(obj => obj.completed);
+    return quest.requirements.current >= quest.requirements.target;
   };
 
   const canClaimReward = (quest: Quest): boolean => {
-    return isQuestCompleted(quest) && quest.status !== 'completed';
+    return isQuestCompleted(quest) && quest.status === 'completed';
+  };
+
+  const getDifficultyColor = (difficulty: string): string => {
+    switch (difficulty) {
+      case 'easy': return 'text-green-400';
+      case 'medium': return 'text-yellow-400';
+      case 'hard': return 'text-orange-400';
+      case 'epic': return 'text-purple-400';
+      default: return 'text-gray-400';
+    }
   };
 
   const renderQuestCard = (quest: Quest) => (
@@ -73,48 +284,46 @@ export default function Quests() {
         <div className="flex items-center space-x-3">
           <span className="text-2xl">{getQuestTypeIcon(quest.type)}</span>
           <div>
-            <h3 className="text-lg font-semibold">{quest.name}</h3>
+            <h3 className="text-lg font-semibold">{quest.title}</h3>
             <p className="text-gray-400 text-sm">{quest.description}</p>
+            <div className="flex items-center space-x-2 mt-1">
+              <span className={`text-xs font-medium ${getDifficultyColor(quest.difficulty)}`}>
+                {quest.difficulty.toUpperCase()}
+              </span>
+              {quest.expiresAt && (
+                <span className="text-xs text-gray-500">• Expires: {quest.expiresAt}</span>
+              )}
+            </div>
           </div>
         </div>
-        
+
         <div className="text-right">
-          <div className={`badge ${quest.status === 'completed' ? 'success' : 
-                                   quest.status === 'active' ? 'info' : 
-                                   quest.status === 'expired' ? 'error' : 'warning'}`}>
-            {quest.status}
+          <div className={`badge ${quest.status === 'completed' ? 'success' :
+                                   quest.status === 'in_progress' ? 'info' :
+                                   quest.status === 'claimed' ? 'success' : 'warning'}`}>
+            {quest.status.replace('_', ' ')}
           </div>
-          {quest.type === 'daily' && (
-            <div className="text-xs text-gray-400 mt-1">Resets in 12h</div>
-          )}
-          {quest.type === 'weekly' && (
-            <div className="text-xs text-gray-400 mt-1">Resets in 3d</div>
-          )}
         </div>
       </div>
 
-      {/* Objectives */}
-      <div className="space-y-3 mb-4">
-        {quest.objectives.map((objective) => (
-          <div key={objective.id} className="bg-gray-800/50 rounded-lg p-3">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center space-x-2">
-                <span className="text-lg">{getObjectiveIcon(objective.type)}</span>
-                <span className="text-sm">{objective.description}</span>
-              </div>
-              <div className="text-sm font-semibold">
-                {objective.current}/{objective.target}
-              </div>
-            </div>
-            
-            <div className="progress-bar">
-              <div 
-                className="progress-fill" 
-                style={{ width: `${getProgressPercentage(objective.current, objective.target)}%` }}
-              ></div>
-            </div>
+      {/* Progress */}
+      <div className="bg-gray-800/50 rounded-lg p-3 mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center space-x-2">
+            <span className="text-lg">{getObjectiveIcon(quest.requirements.type)}</span>
+            <span className="text-sm">Progress</span>
           </div>
-        ))}
+          <div className="text-sm font-semibold">
+            {quest.requirements.current}/{quest.requirements.target}
+          </div>
+        </div>
+
+        <div className="progress-bar">
+          <div
+            className="progress-fill"
+            style={{ width: `${getProgressPercentage(quest.requirements.current, quest.requirements.target)}%` }}
+          ></div>
+        </div>
       </div>
 
       {/* Rewards */}
@@ -123,31 +332,42 @@ export default function Quests() {
           <div>
             <h4 className="text-sm font-semibold mb-2">Rewards</h4>
             <div className="flex flex-wrap gap-2">
-              <span className="badge info">
-                💰 {quest.rewards.mwar} MWAR
-              </span>
-              <span className="badge info">
-                ⭐ {quest.rewards.experience} EXP
-              </span>
+              {quest.rewards.mwar && (
+                <span className="badge info">
+                  💰 {quest.rewards.mwar} MWAR
+                </span>
+              )}
+              {quest.rewards.experience && (
+                <span className="badge info">
+                  ⭐ {quest.rewards.experience} EXP
+                </span>
+              )}
               {quest.rewards.items && quest.rewards.items.length > 0 && (
                 <span className="badge warning">
-                  🎁 {quest.rewards.items.length} Items
+                  🎁 {quest.rewards.items.join(', ')}
                 </span>
               )}
             </div>
           </div>
           
           <div>
-            {canClaimReward(quest) ? (
+            {quest.status === 'available' ? (
+              <button
+                onClick={() => handleStartQuest(quest.id)}
+                className="btn-primary"
+              >
+                Start Quest
+              </button>
+            ) : quest.status === 'completed' ? (
               <button
                 onClick={() => handleClaimReward(quest.id)}
                 className="btn-primary"
               >
                 Claim Reward
               </button>
-            ) : quest.status === 'completed' ? (
+            ) : quest.status === 'claimed' ? (
               <button className="btn-secondary" disabled>
-                Completed
+                ✅ Claimed
               </button>
             ) : (
               <button className="btn-secondary" disabled>
