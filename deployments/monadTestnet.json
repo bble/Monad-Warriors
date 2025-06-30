@@ -9,7 +9,7 @@
   },
   "chainId": 10143,
   "rpcUrl": "https://testnet-rpc.monad.xyz",
-  "explorerUrl": "https://testnet-explorer.monad.xyz",
+  "explorerUrl": "https://testnet.monadexplorer.com",
   "gasUsed": {
     "mwarToken": "~1,456,520",
     "heroNFT": "~2,606,560", 
