@@ -32,12 +32,12 @@ export const config = getDefaultConfig({
   ssr: false, // 禁用SSR以避免构建问题
 });
 
-// 合约地址 (部署后需要更新)
+// 合约地址 - 已部署的真实地址
 export const CONTRACT_ADDRESSES = {
-  MWAR_TOKEN: process.env.NEXT_PUBLIC_MWAR_TOKEN_ADDRESS || '',
-  HERO_NFT: process.env.NEXT_PUBLIC_HERO_NFT_ADDRESS || '',
-  GAME_CORE: process.env.NEXT_PUBLIC_GAME_CORE_ADDRESS || '',
-};
+  MWAR_TOKEN: process.env.NEXT_PUBLIC_MWAR_TOKEN_ADDRESS || '0xD2f5d0418577BBCC98aAc97807e433dd091C1Be8',
+  HERO_NFT: process.env.NEXT_PUBLIC_HERO_NFT_ADDRESS || '0xcD7Cd65d4bE940280B752e10C3eEb6D6cF53B18D',
+  GAME_CORE: process.env.NEXT_PUBLIC_GAME_CORE_ADDRESS || '0xecde73957F1c15cE2E225fA4F485ABE03fcC7E48',
+} as const;
 
 // 合约ABI (简化版本，实际使用时需要完整ABI)
 export const MWAR_TOKEN_ABI = [
