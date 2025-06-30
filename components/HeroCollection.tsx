@@ -3,6 +3,7 @@ import { useAccount, useReadContract, useWriteContract, useWaitForTransactionRec
 import {
   GAME_CONSTANTS,
   formatMWAR,
+  parseMWAR,
   getRarityColor,
   getClassIcon
 } from '@/utils/web3Config';
@@ -55,42 +56,67 @@ export default function HeroCollection() {
 
   // 铸造英雄
   const { writeContract, data: mintHash } = useWriteContract();
-  
+
   const { isLoading: isMintLoading, isSuccess: isMintSuccess } = useWaitForTransactionReceipt({
     hash: mintHash,
   });
 
+  // 监听铸造成功事件
+  useEffect(() => {
+    if (isMintSuccess) {
+      setIsLoading(false);
+      console.log('Hero minted successfully!');
+      // 这里可以添加成功提示或刷新英雄列表
+    }
+  }, [isMintSuccess]);
+
   const handleMintHero = async () => {
-    if (!address) return;
-    
+    if (!address) {
+      alert('Please connect your wallet first');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // 首先批准MWAR代币消费
+      // 获取铸造成本
       const mintCost = GAME_CONSTANTS.MINT_COSTS[selectedRarity as keyof typeof GAME_CONSTANTS.MINT_COSTS];
-      
-      await writeContract({
-        address: CONTRACT_ADDRESSES.MWAR_TOKEN as `0x${string}`,
-        abi: MWAR_TOKEN_ABI,
-        functionName: 'approve',
-        args: [CONTRACT_ADDRESSES.HERO_NFT as `0x${string}`, BigInt(mintCost) * BigInt(1e18)],
-      });
+      const mintCostWei = parseMWAR(mintCost.toString());
 
-      // 然后铸造英雄
+      console.log('Minting hero with cost:', mintCost, 'MWAR');
+      console.log('Cost in Wei:', mintCostWei.toString());
+
+      // 直接铸造英雄（假设用户已经有足够的MWAR余额）
+      // 在实际应用中，合约会处理代币转账
       await writeContract({
         address: CONTRACT_ADDRESSES.HERO_NFT as `0x${string}`,
         abi: HERO_NFT_ABI,
         functionName: 'mintHero',
         args: [
-          address,
+          address as `0x${string}`,
           selectedRarity,
           selectedClass,
           `https://api.monadwarriors.com/hero/${Date.now()}.json`
         ],
       });
+
+      console.log('Mint transaction submitted');
+
     } catch (error) {
       console.error('Mint failed:', error);
-    } finally {
       setIsLoading(false);
+
+      // 显示用户友好的错误信息
+      if (error instanceof Error) {
+        if (error.message.includes('insufficient funds')) {
+          alert('Insufficient MWAR tokens for minting');
+        } else if (error.message.includes('user rejected')) {
+          alert('Transaction was cancelled');
+        } else {
+          alert('Minting failed: ' + error.message);
+        }
+      } else {
+        alert('Minting failed. Please try again.');
+      }
     }
   };
 
