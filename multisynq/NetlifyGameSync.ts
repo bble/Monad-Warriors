@@ -98,26 +98,35 @@ export class NetlifyGameSyncManager {
    * 发送API请求
    */
   private async sendApiRequest(action: string, payload: any): Promise<any> {
+    const requestData = { action, payload };
+    console.log(`🌐 Sending API request to ${this.apiUrl}:`, requestData);
+
     try {
       const response = await fetch(this.apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ action, payload }),
+        body: JSON.stringify(requestData),
       });
 
+      console.log(`📡 API response status: ${response.status} ${response.statusText}`);
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error(`❌ API error response:`, errorText);
+        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
       }
 
       const result = await response.json();
+      console.log(`✅ API response data:`, result);
+
       if (result.success && result.data) {
         this.updateGameState(result.data);
       }
       return result;
     } catch (error) {
-      console.error('API request failed:', error);
+      console.error('❌ API request failed:', error);
       throw error;
     }
   }

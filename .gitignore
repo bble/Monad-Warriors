@@ -70,3 +70,6 @@ README_OLD.md
 *.bak
 *.backup
 *_OLD.*
+
+# Local Netlify folder
+.netlify

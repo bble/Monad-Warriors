@@ -49,6 +49,9 @@ exports.handler = async (event, context) => {
     'Content-Type': 'application/json'
   };
 
+  console.log(`🔥 Netlify Function called: ${event.httpMethod} ${event.path}`);
+  console.log(`📝 Request body:`, event.body);
+
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
   }
@@ -83,8 +86,21 @@ exports.handler = async (event, context) => {
     }
 
     if (httpMethod === 'POST') {
+      console.log(`📨 Processing POST request with body:`, body);
+
+      if (!body) {
+        console.error('❌ No request body provided');
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ success: false, error: 'No request body provided' })
+        };
+      }
+
       const data = JSON.parse(body);
       const { action, payload } = data;
+
+      console.log(`🎯 Action: ${action}, Payload:`, payload);
 
       switch (action) {
         case 'join':
