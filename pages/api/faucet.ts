@@ -22,12 +22,43 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  // 设置CORS头
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // 检查是否在生产环境
+  if (process.env.NODE_ENV === 'production' && !wallet) {
+    return res.status(503).json({
+      error: 'Faucet service temporarily unavailable',
+      message: 'The faucet is being configured for production deployment'
+    });
+  }
+
+  // 开发环境的模拟响应
   if (!wallet) {
-    return res.status(500).json({ error: 'Faucet wallet not configured' });
+    const { action } = req.body;
+    if (action === 'status') {
+      return res.status(200).json({
+        canClaim: true,
+        timeUntilNext: 0,
+        amount: '1000.0'
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      txHash: '0x' + Math.random().toString(16).substr(2, 64),
+      amount: '1000.0',
+      message: 'Simulated faucet response (development mode)'
+    });
   }
 
   try {

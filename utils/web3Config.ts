@@ -1,5 +1,6 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 import { defineChain } from 'viem';
+import { http } from 'wagmi';
 
 // 定义Monad Testnet链
 export const monadTestnet = defineChain({
@@ -27,8 +28,11 @@ export const monadTestnet = defineChain({
 // RainbowKit配置
 export const config = getDefaultConfig({
   appName: 'Monad Warriors',
-  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'YOUR_PROJECT_ID', // 需要从WalletConnect获取
+  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6', // 临时项目ID
   chains: [monadTestnet],
+  transports: {
+    [monadTestnet.id]: http('https://testnet-rpc.monad.xyz'),
+  },
   ssr: false, // 禁用SSR以避免构建问题
 });
 
