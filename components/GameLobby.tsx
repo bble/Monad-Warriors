@@ -97,41 +97,61 @@ export default function GameLobby() {
     fetchUserHeroes();
   }, [address]);
 
-  const handleJoinLobby = () => {
-    joinGame(selectedHeroId);
-  };
-
-  const handleLeaveLobby = () => {
-    leaveGame();
-  };
-
-  const handleQuickMatch = () => {
-    const opponent = findMatch();
-    if (opponent) {
-      createBattle(opponent.address, opponent.heroId);
-    } else {
-      // 更详细的错误信息
-      const availableOpponents = onlinePlayers.filter(
-        player => player.address !== address && player.status === 'idle'
-      );
-
-      if (onlinePlayers.length <= 1) {
-        alert('You are the only player online. Invite friends to join the game!');
-      } else if (availableOpponents.length === 0) {
-        alert('All other players are currently busy in battles. Please wait or try again later!');
-      } else {
-        alert('No available opponents found. Try again later!');
-      }
+  const handleJoinLobby = async () => {
+    try {
+      await joinGame(selectedHeroId);
+    } catch (error) {
+      console.error('Failed to join lobby:', error);
     }
   };
 
-  const handleChallenge = (targetAddress: string, targetHeroId: number) => {
-    createBattle(targetAddress, targetHeroId);
+  const handleLeaveLobby = async () => {
+    try {
+      await leaveGame();
+    } catch (error) {
+      console.error('Failed to leave lobby:', error);
+    }
   };
 
-  const handleBattleAction = () => {
-    if (currentBattle) {
-      makeBattleMove(currentBattle.id, battleAction);
+  const handleQuickMatch = async () => {
+    try {
+      const opponent = findMatch();
+      if (opponent) {
+        await createBattle(opponent.address, opponent.heroId);
+      } else {
+        // 更详细的错误信息
+        const availableOpponents = onlinePlayers.filter(
+          player => player.address !== address && player.status === 'idle'
+        );
+
+        if (onlinePlayers.length <= 1) {
+          alert('You are the only player online. Invite friends to join the game!');
+        } else if (availableOpponents.length === 0) {
+          alert('All other players are currently busy in battles. Please wait or try again later!');
+        } else {
+          alert('No available opponents found. Try again later!');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to create quick match:', error);
+    }
+  };
+
+  const handleChallenge = async (targetAddress: string, targetHeroId: number) => {
+    try {
+      await createBattle(targetAddress, targetHeroId);
+    } catch (error) {
+      console.error('Failed to challenge player:', error);
+    }
+  };
+
+  const handleBattleAction = async () => {
+    try {
+      if (currentBattle) {
+        await makeBattleMove(currentBattle.id, battleAction);
+      }
+    } catch (error) {
+      console.error('Failed to make battle move:', error);
     }
   };
 

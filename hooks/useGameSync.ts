@@ -19,9 +19,9 @@ export interface UseGameSyncReturn {
   playerState: PlayerState | null;
 
   // Actions
-  joinGame: (heroId: number) => void;
-  leaveGame: () => void;
-  updatePosition: (x: number, y: number) => void;
+  joinGame: (heroId: number) => Promise<void>;
+  leaveGame: () => Promise<void>;
+  updatePosition: (x: number, y: number) => Promise<void>;
   findMatch: () => PlayerState | null;
   createBattle: (opponentAddress: string, opponentHeroId: number) => Promise<string>;
   makeBattleMove: (battleId: string, action: 'attack' | 'defend' | 'special') => Promise<void>;
@@ -73,7 +73,7 @@ export function useGameSync(): UseGameSyncReturn {
   }, [getSyncManager]);
 
   // 加入游戏
-  const joinGame = useCallback((heroId: number) => {
+  const joinGame = useCallback(async (heroId: number) => {
     if (!address) return;
 
     const newPlayerState: PlayerState = {
@@ -84,38 +84,52 @@ export function useGameSync(): UseGameSyncReturn {
       lastUpdate: Date.now(),
     };
 
-    const syncManager = getSyncManager();
-    syncManager.addPlayer(newPlayerState);
-    setPlayerState(newPlayerState);
+    try {
+      const syncManager = getSyncManager();
+      await syncManager.addPlayer(newPlayerState);
+      setPlayerState(newPlayerState);
+      console.log('✅ Successfully joined game:', address);
 
-    // 同时保存到sessionStorage，用于页面刷新后恢复
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('monad-game-player-state', JSON.stringify(newPlayerState));
+      // 同时保存到sessionStorage，用于页面刷新后恢复
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('monad-game-player-state', JSON.stringify(newPlayerState));
+      }
+    } catch (error) {
+      console.error('❌ Failed to join game:', error);
     }
   }, [address, getSyncManager]);
 
   // 离开游戏
-  const leaveGame = useCallback(() => {
+  const leaveGame = useCallback(async () => {
     if (!address) return;
 
-    const syncManager = getSyncManager();
-    syncManager.removePlayer(address);
-    setPlayerState(null);
-    setCurrentBattle(null);
+    try {
+      const syncManager = getSyncManager();
+      await syncManager.removePlayer(address);
+      setPlayerState(null);
+      setCurrentBattle(null);
+      console.log('✅ Successfully left game:', address);
 
-    // 清理sessionStorage
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('monad-game-player-state');
+      // 清理sessionStorage
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('monad-game-player-state');
+      }
+    } catch (error) {
+      console.error('❌ Failed to leave game:', error);
     }
   }, [address, getSyncManager]);
 
   // 更新位置
-  const updatePosition = useCallback((x: number, y: number) => {
+  const updatePosition = useCallback(async (x: number, y: number) => {
     if (!address) return;
 
-    const syncManager = getSyncManager();
-    syncManager.updatePlayer(address, { position: { x, y } });
-    setPlayerState(prev => prev ? { ...prev, position: { x, y } } : null);
+    try {
+      const syncManager = getSyncManager();
+      await syncManager.updatePlayer(address, { position: { x, y } });
+      setPlayerState(prev => prev ? { ...prev, position: { x, y } } : null);
+    } catch (error) {
+      console.error('❌ Failed to update position:', error);
+    }
   }, [address, getSyncManager]);
 
   // 寻找匹配

@@ -80,8 +80,9 @@ export default async function handler(
 
           // 使用管理员分发功能发送代币
           const tx = await mwarContract.distributeTestTokens(address, FAUCET_AMOUNT, {
-            gasLimit: 100000,
-            gasPrice: ethers.parseUnits("15", "gwei") // 使用15 gwei适应Monad testnet
+            gasLimit: 200000,
+            maxFeePerGas: ethers.parseUnits("50", "gwei"), // 提高到50 gwei
+            maxPriorityFeePerGas: ethers.parseUnits("2", "gwei") // 添加优先费
           });
 
           // 记录领取时间

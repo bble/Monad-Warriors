@@ -1,30 +1,39 @@
 // Netlify Functions替代WebSocket服务器
 // 用于在Netlify环境下提供游戏同步功能
 
-const gameState = {
+// 使用全局变量模拟持久存储 (在实际生产中应该使用数据库)
+global.gameState = global.gameState || {
   players: new Map(),
   battles: new Map(),
   lastUpdate: Date.now()
 };
 
+const gameState = global.gameState;
+
 // 清理过期数据
 function cleanupExpiredData() {
   const now = Date.now();
-  const expireTime = 5 * 60 * 1000; // 5分钟过期
+  const expireTime = 30 * 60 * 1000; // 30分钟过期 (延长过期时间)
 
   // 清理过期玩家
+  const playersToDelete = [];
   for (const [address, player] of gameState.players.entries()) {
     if (now - player.lastUpdate > expireTime) {
-      gameState.players.delete(address);
+      playersToDelete.push(address);
     }
   }
+  playersToDelete.forEach(address => gameState.players.delete(address));
 
   // 清理过期战斗
+  const battlesToDelete = [];
   for (const [battleId, battle] of gameState.battles.entries()) {
     if (now - battle.startTime > expireTime) {
-      gameState.battles.delete(battleId);
+      battlesToDelete.push(battleId);
     }
   }
+  battlesToDelete.forEach(battleId => gameState.battles.delete(battleId));
+
+  console.log(`Cleaned up ${playersToDelete.length} expired players and ${battlesToDelete.length} expired battles`);
 }
 
 exports.handler = async (event, context) => {
@@ -68,13 +77,15 @@ exports.handler = async (event, context) => {
       switch (action) {
         case 'join':
           const { address, heroId } = payload;
-          gameState.players.set(address, {
+          const newPlayer = {
             address,
             heroId,
             position: { x: Math.random() * 1000, y: Math.random() * 1000 },
             status: 'idle',
             lastUpdate: Date.now()
-          });
+          };
+          gameState.players.set(address, newPlayer);
+          console.log(`Player joined: ${address}, Total players: ${gameState.players.size}`);
           break;
 
         case 'leave':
