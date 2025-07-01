@@ -47,7 +47,7 @@ export default function PlayerDataViewer() {
   const formatPlayerStats = (stats: [bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint]) => {
     const [totalBattles, wins, losses, draws, totalRewards, lastBattleTime, winStreak, maxWinStreak] = stats;
     
-    const winRate = totalBattles > 0n ? Number((wins * 100n) / totalBattles) : 0;
+    const winRate = totalBattles > BigInt(0) ? Number((wins * BigInt(100)) / totalBattles) : 0;
     
     return {
       totalBattles: Number(totalBattles),
@@ -145,7 +145,7 @@ export default function PlayerDataViewer() {
                 );
               })()}
               
-              {playerStats[5] > 0n && (
+              {playerStats[5] > BigInt(0) && (
                 <div className="mt-2 pt-2 border-t border-purple-500/20 text-xs">
                   最后战斗: {new Date(Number(playerStats[5]) * 1000).toLocaleString()}
                 </div>

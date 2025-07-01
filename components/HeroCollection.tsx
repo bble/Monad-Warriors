@@ -85,7 +85,7 @@ export default function HeroCollection() {
   // 获取用户的英雄数据
   useEffect(() => {
     const fetchHeroes = async () => {
-      if (!address || !heroBalance || heroBalance === 0n) {
+      if (!address || !heroBalance || heroBalance === BigInt(0)) {
         setHeroes([]);
         return;
       }
@@ -234,10 +234,10 @@ export default function HeroCollection() {
   const handleMintHero = async () => {
     try {
       // 确保参数是正确的类型
-      const mintArgs = [
-        address,
-        BigInt(selectedRarity),
-        BigInt(selectedClass),
+      const mintArgs: readonly [`0x${string}`, number, number, string] = [
+        address as `0x${string}`,
+        selectedRarity,
+        selectedClass,
         `https://api.monadwarriors.com/hero/${Date.now()}.json`
       ];
 

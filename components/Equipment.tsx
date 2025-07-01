@@ -347,6 +347,7 @@ export default function Equipment() {
   };
 
   const canEquip = (equipment: Equipment, heroClass: number, heroLevel: number): boolean => {
+    if (!equipment.requirements) return true; // 如果没有要求，可以装备
     if (equipment.requirements.level > heroLevel) return false;
     if (equipment.requirements.class && !equipment.requirements.class.includes(heroClass)) return false;
     return true;
@@ -460,7 +461,7 @@ export default function Equipment() {
         {equipment.description}
       </div>
 
-      {equipment.requirements.level > 1 && (
+      {equipment.requirements && equipment.requirements.level > 1 && (
         <div className="text-xs text-yellow-400 mb-3">
           Requires: Level {equipment.requirements.level}
           {equipment.requirements.class && (
@@ -624,19 +625,19 @@ export default function Equipment() {
                   <p className="text-sm text-gray-400 mb-3">{item.description}</p>
 
                   <div className="space-y-2 mb-4">
-                    {item.stats.attack > 0 && (
+                    {item.stats && item.stats.attack && item.stats.attack > 0 && (
                       <div className="flex justify-between text-sm">
                         <span>Attack:</span>
                         <span className="text-red-400">+{item.stats.attack}</span>
                       </div>
                     )}
-                    {item.stats.defense > 0 && (
+                    {item.stats && item.stats.defense && item.stats.defense > 0 && (
                       <div className="flex justify-between text-sm">
                         <span>Defense:</span>
                         <span className="text-blue-400">+{item.stats.defense}</span>
                       </div>
                     )}
-                    {item.stats.speed !== 0 && (
+                    {item.stats && item.stats.speed !== undefined && item.stats.speed !== 0 && (
                       <div className="flex justify-between text-sm">
                         <span>Speed:</span>
                         <span className={item.stats.speed > 0 ? 'text-green-400' : 'text-red-400'}>
@@ -644,7 +645,7 @@ export default function Equipment() {
                         </span>
                       </div>
                     )}
-                    {item.stats.health > 0 && (
+                    {item.stats && item.stats.health && item.stats.health > 0 && (
                       <div className="flex justify-between text-sm">
                         <span>Health:</span>
                         <span className="text-green-400">+{item.stats.health}</span>

@@ -17,20 +17,20 @@ export interface GasRecommendation {
  */
 export function getGasRecommendations(baseGasEstimate: bigint, currentGasPrice: bigint): GasRecommendation {
   // 战斗交易的最小gas限制（基于失败案例分析）
-  const MIN_BATTLE_GAS = 800000n;
-  
+  const MIN_BATTLE_GAS = BigInt(800000);
+
   // 确保gas限制足够
   const safeGasLimit = baseGasEstimate > MIN_BATTLE_GAS ? baseGasEstimate : MIN_BATTLE_GAS;
-  
+
   // 不同策略的gas限制
-  const conservativeGas = safeGasLimit + (safeGasLimit * 100n) / 100n; // +100%
-  const standardGas = safeGasLimit + (safeGasLimit * 50n) / 100n;     // +50%
-  const fastGas = safeGasLimit + (safeGasLimit * 20n) / 100n;         // +20%
-  
+  const conservativeGas = safeGasLimit + (safeGasLimit * BigInt(100)) / BigInt(100); // +100%
+  const standardGas = safeGasLimit + (safeGasLimit * BigInt(50)) / BigInt(100);     // +50%
+  const fastGas = safeGasLimit + (safeGasLimit * BigInt(20)) / BigInt(100);         // +20%
+
   // 不同策略的gas价格（gwei）
-  const conservativePrice = 15n * 10n**9n; // 15 gwei
-  const standardPrice = 20n * 10n**9n;     // 20 gwei  
-  const fastPrice = 30n * 10n**9n;         // 30 gwei
+  const conservativePrice = BigInt(15) * BigInt(1000000000); // 15 gwei
+  const standardPrice = BigInt(20) * BigInt(1000000000);     // 20 gwei
+  const fastPrice = BigInt(30) * BigInt(1000000000);         // 30 gwei
   
   return {
     conservative: {
@@ -55,14 +55,14 @@ export function getGasRecommendations(baseGasEstimate: bigint, currentGasPrice: 
  * 格式化MON数量显示
  */
 function formatMON(wei: bigint): string {
-  const ether = wei / 10n**18n;
-  const remainder = wei % 10n**18n;
-  const decimal = remainder / 10n**14n; // 保留4位小数
-  
-  if (ether === 0n) {
+  const ether = wei / BigInt(1000000000000000000); // 10^18
+  const remainder = wei % BigInt(1000000000000000000); // 10^18
+  const decimal = remainder / BigInt(100000000000000); // 10^14, 保留4位小数
+
+  if (ether === BigInt(0)) {
     return `0.${decimal.toString().padStart(4, '0')}`;
   }
-  
+
   return `${ether}.${decimal.toString().padStart(4, '0')}`;
 }
 
@@ -81,13 +81,13 @@ export function validateGasSettings(gasLimit: string, gasPrice: string): {
   const price = parseFloat(gasPrice);
   
   // 检查gas限制
-  if (limit < 500000n) {
+  if (limit < BigInt(500000)) {
     errors.push('Gas限制太低，可能导致交易失败');
-  } else if (limit < 800000n) {
+  } else if (limit < BigInt(800000)) {
     warnings.push('Gas限制偏低，建议设置为800,000以上');
   }
-  
-  if (limit > 2000000n) {
+
+  if (limit > BigInt(2000000)) {
     warnings.push('Gas限制过高，可能浪费费用');
   }
   

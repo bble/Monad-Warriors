@@ -57,10 +57,10 @@ export default function GasEstimator({
       console.log('预估gas限制:', gasEstimate.toString());
 
       // 3. 添加更大的安全边际（80%），因为战斗函数比较复杂
-      const gasWithBuffer = gasEstimate + (gasEstimate * 80n) / 100n;
+      const gasWithBuffer = gasEstimate + (gasEstimate * BigInt(80)) / BigInt(100);
 
       // 4. 设置最小gas限制（基于你的失败交易，至少需要800,000）
-      const minGasLimit = 800000n;
+      const minGasLimit = BigInt(800000);
       const finalGasLimit = gasWithBuffer > minGasLimit ? gasWithBuffer : minGasLimit;
       
       // 5. 计算费用
@@ -68,7 +68,7 @@ export default function GasEstimator({
       const costInEther = formatEther(estimatedCost);
 
       // 6. 建议的gas价格（降低到15-20 gwei，节省费用）
-      const suggestedGasPrice = 20000000000n; // 20 gwei
+      const suggestedGasPrice = BigInt(20000000000); // 20 gwei
 
       const result = {
         gasLimit: finalGasLimit.toString(),

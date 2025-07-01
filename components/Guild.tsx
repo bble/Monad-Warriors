@@ -77,18 +77,19 @@ export default function Guild() {
             memberCount: parseInt(playerGuildResult.guild.memberCount),
             maxMembers: 50, // 默认最大成员数
             level: parseInt(playerGuildResult.guild.level),
-            treasury: BigInt(Math.floor(parseFloat(playerGuildResult.guild.treasury) * 1e18)),
+            experience: 0, // 默认经验值
+            maxExperience: 1000, // 默认最大经验值
+            treasury: Math.floor(parseFloat(playerGuildResult.guild.treasury) * 1e18),
             leader: playerGuildResult.guild.leader,
-            createdAt: parseInt(playerGuildResult.guild.createdAt) * 1000,
+            createdAt: new Date(parseInt(playerGuildResult.guild.createdAt) * 1000).toISOString(),
             requirements: {
               minLevel: 1,
-              applicationRequired: false,
-              minPower: 0
+              applicationRequired: false
             },
-            bonuses: {
-              battleReward: 5,
-              questReward: 5,
-              experienceBonus: 5
+            perks: {
+              expBonus: 5,
+              rewardBonus: 5,
+              battleBonus: 5
             }
           });
         }
@@ -113,18 +114,19 @@ export default function Guild() {
             memberCount: parseInt(guild.memberCount),
             maxMembers: 50,
             level: parseInt(guild.level),
-            treasury: BigInt(Math.floor(parseFloat(guild.treasury) * 1e18)),
+            experience: 0,
+            maxExperience: 1000,
+            treasury: Math.floor(parseFloat(guild.treasury) * 1e18),
             leader: guild.leader,
-            createdAt: parseInt(guild.createdAt) * 1000,
+            createdAt: new Date(parseInt(guild.createdAt) * 1000).toISOString(),
             requirements: {
               minLevel: 1,
-              applicationRequired: false,
-              minPower: 0
+              applicationRequired: false
             },
-            bonuses: {
-              battleReward: 5,
-              questReward: 5,
-              experienceBonus: 5
+            perks: {
+              expBonus: 5,
+              rewardBonus: 5,
+              battleBonus: 5
             }
           }));
           setAvailableGuilds(guilds);
@@ -154,18 +156,19 @@ export default function Guild() {
           memberCount: 45,
           maxMembers: 50,
           level: 8,
-          treasury: BigInt('15000000000000000000000'), // 15000 MWAR
+          experience: 750,
+          maxExperience: 1000,
+          treasury: 15000000000000000000000, // 15000 MWAR
           leader: '0x1234567890123456789012345678901234567890',
-          createdAt: Date.now() - 86400000 * 30, // 30 days ago
+          createdAt: new Date(Date.now() - 86400000 * 30).toISOString(), // 30 days ago
           requirements: {
             minLevel: 10,
-            applicationRequired: false,
-            minPower: 1000
+            applicationRequired: false
           },
-          bonuses: {
-            battleReward: 15,
-            questReward: 20,
-            experienceBonus: 10
+          perks: {
+            expBonus: 10,
+            rewardBonus: 20,
+            battleBonus: 15
           }
         },
         {
@@ -175,18 +178,19 @@ export default function Guild() {
           memberCount: 32,
           maxMembers: 40,
           level: 6,
-          treasury: BigInt('8500000000000000000000'), // 8500 MWAR
+          experience: 450,
+          maxExperience: 800,
+          treasury: 8500000000000000000000, // 8500 MWAR
           leader: '0x2345678901234567890123456789012345678901',
-          createdAt: Date.now() - 86400000 * 15, // 15 days ago
+          createdAt: new Date(Date.now() - 86400000 * 15).toISOString(), // 15 days ago
           requirements: {
             minLevel: 5,
-            applicationRequired: true,
-            minPower: 500
+            applicationRequired: true
           },
-          bonuses: {
-            battleReward: 10,
-            questReward: 25,
-            experienceBonus: 15
+          perks: {
+            expBonus: 15,
+            rewardBonus: 25,
+            battleBonus: 10
           }
         },
         {
@@ -196,18 +200,19 @@ export default function Guild() {
           memberCount: 28,
           maxMembers: 35,
           level: 7,
-          treasury: BigInt('12000000000000000000000'), // 12000 MWAR
+          experience: 600,
+          maxExperience: 900,
+          treasury: 12000000000000000000000, // 12000 MWAR
           leader: '0x3456789012345678901234567890123456789012',
-          createdAt: Date.now() - 86400000 * 20, // 20 days ago
+          createdAt: new Date(Date.now() - 86400000 * 20).toISOString(), // 20 days ago
           requirements: {
             minLevel: 8,
-            applicationRequired: true,
-            minPower: 800
+            applicationRequired: true
           },
-          bonuses: {
-            battleReward: 20,
-            questReward: 10,
-            experienceBonus: 5
+          perks: {
+            expBonus: 5,
+            rewardBonus: 10,
+            battleBonus: 20
           }
         }
       ];
@@ -229,7 +234,11 @@ export default function Guild() {
               level: 15,
               contribution: 1250,
               joinedAt: 'Last week',
-              lastActive: 'Now'
+              lastActive: 'Now',
+              favoriteHero: {
+                class: 0,
+                rarity: 1
+              }
             },
             {
               address: userGuild.leader,
@@ -238,7 +247,11 @@ export default function Guild() {
               level: 25,
               contribution: 5000,
               joinedAt: '1 month ago',
-              lastActive: '1 hour ago'
+              lastActive: '1 hour ago',
+              favoriteHero: {
+                class: 3,
+                rarity: 3
+              }
             },
             {
               address: '0x4567890123456789012345678901234567890123',
@@ -247,7 +260,11 @@ export default function Guild() {
               level: 22,
               contribution: 3200,
               joinedAt: '3 weeks ago',
-              lastActive: '2 hours ago'
+              lastActive: '2 hours ago',
+              favoriteHero: {
+                class: 1,
+                rarity: 2
+              }
             },
             {
               address: '0x5678901234567890123456789012345678901234',
@@ -256,7 +273,11 @@ export default function Guild() {
               level: 18,
               contribution: 2100,
               joinedAt: '2 weeks ago',
-              lastActive: '1 day ago'
+              lastActive: '1 day ago',
+              favoriteHero: {
+                class: 2,
+                rarity: 1
+              }
             }
           ]);
         }
@@ -466,7 +487,8 @@ export default function Guild() {
       alert('Guild system is temporarily unavailable. Please try again later.');
     }
 
-    alert(`Guild "${newGuild.name}" created successfully!`);
+    // 这行代码是多余的，因为上面已经有成功消息了
+    // alert(`Guild "${newGuildName}" created successfully!`);
   };
 
   const formatAddress = (addr: string): string => {
@@ -755,9 +777,9 @@ export default function Guild() {
                   </div>
 
                   <div className="flex flex-wrap gap-2">
-                    <span className="badge success">+{guild.bonuses.experienceBonus}% EXP</span>
-                    <span className="badge success">+{guild.bonuses.questReward}% Quest</span>
-                    <span className="badge success">+{guild.bonuses.battleReward}% Battle</span>
+                    <span className="badge success">+{guild.perks.expBonus}% EXP</span>
+                    <span className="badge success">+{guild.perks.rewardBonus}% Reward</span>
+                    <span className="badge success">+{guild.perks.battleBonus}% Battle</span>
                     {guild.requirements.applicationRequired && (
                       <span className="badge warning">Application Required</span>
                     )}
