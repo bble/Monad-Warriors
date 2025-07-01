@@ -129,17 +129,24 @@ export class NetlifyGameSyncManager {
     const oldPlayers = new Map(this.gameState.players);
     const oldBattles = new Map(this.gameState.battles);
 
+    console.log(`🔄 Updating game state: ${data.players?.length || 0} players, ${data.battles?.length || 0} battles`);
+
     // 更新玩家状态
     this.gameState.players.clear();
-    data.players.forEach((player: PlayerState) => {
-      this.gameState.players.set(player.address, player);
-    });
+    if (data.players) {
+      data.players.forEach((player: PlayerState) => {
+        this.gameState.players.set(player.address, player);
+        console.log(`👤 Player: ${player.address.slice(0,6)}...${player.address.slice(-4)} (${player.status})`);
+      });
+    }
 
     // 更新战斗状态
     this.gameState.battles.clear();
-    data.battles.forEach((battle: BattleState) => {
-      this.gameState.battles.set(battle.id, battle);
-    });
+    if (data.battles) {
+      data.battles.forEach((battle: BattleState) => {
+        this.gameState.battles.set(battle.id, battle);
+      });
+    }
 
     this.gameState.timestamp = data.timestamp || Date.now();
 
@@ -208,11 +215,12 @@ export class NetlifyGameSyncManager {
    * 添加玩家
    */
   async addPlayer(playerState: PlayerState): Promise<void> {
-    await this.sendApiRequest('join', {
+    console.log(`🎮 Adding player to Netlify API: ${playerState.address} with hero ${playerState.heroId}`);
+    const result = await this.sendApiRequest('join', {
       address: playerState.address,
       heroId: playerState.heroId
     });
-    console.log('✅ Player added via Netlify API:', playerState.address);
+    console.log('✅ Player added via Netlify API:', playerState.address, result);
   }
 
   /**

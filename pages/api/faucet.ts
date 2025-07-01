@@ -80,9 +80,9 @@ export default async function handler(
 
           // 使用管理员分发功能发送代币
           const tx = await mwarContract.distributeTestTokens(address, FAUCET_AMOUNT, {
-            gasLimit: 200000,
-            maxFeePerGas: ethers.parseUnits("50", "gwei"), // 提高到50 gwei
-            maxPriorityFeePerGas: ethers.parseUnits("2", "gwei") // 添加优先费
+            gasLimit: 300000,
+            maxFeePerGas: ethers.parseUnits("100", "gwei"), // 大幅提高到100 gwei
+            maxPriorityFeePerGas: ethers.parseUnits("10", "gwei") // 提高优先费到10 gwei
           });
 
           // 记录领取时间

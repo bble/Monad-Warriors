@@ -1,12 +1,16 @@
 // Netlify Functions替代WebSocket服务器
 // 用于在Netlify环境下提供游戏同步功能
 
-// 使用全局变量模拟持久存储 (在实际生产中应该使用数据库)
-global.gameState = global.gameState || {
-  players: new Map(),
-  battles: new Map(),
-  lastUpdate: Date.now()
-};
+// 使用全局变量模拟持久存储
+if (!global.gameState) {
+  global.gameState = {
+    players: new Map(),
+    battles: new Map(),
+    lastUpdate: Date.now(),
+    initialized: Date.now()
+  };
+  console.log('🚀 Initializing new game state');
+}
 
 const gameState = global.gameState;
 
@@ -52,18 +56,26 @@ exports.handler = async (event, context) => {
   try {
     cleanupExpiredData();
 
+    console.log(`📊 Game state: ${gameState.players.size} players, ${gameState.battles.size} battles`);
+
     const { httpMethod, body } = event;
     
     if (httpMethod === 'GET') {
       // 返回当前游戏状态
+      const playersArray = Array.from(gameState.players.values());
+      const battlesArray = Array.from(gameState.battles.values());
+
+      console.log(`📤 Returning game state: ${playersArray.length} players, ${battlesArray.length} battles`);
+      console.log('Players:', playersArray.map(p => `${p.address.slice(0,6)}...${p.address.slice(-4)}`));
+
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
           success: true,
           data: {
-            players: Array.from(gameState.players.values()),
-            battles: Array.from(gameState.battles.values()),
+            players: playersArray,
+            battles: battlesArray,
             timestamp: Date.now()
           }
         })
