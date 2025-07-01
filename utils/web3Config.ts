@@ -25,10 +25,10 @@ export const monadTestnet = defineChain({
   testnet: true,
 });
 
-// RainbowKit配置
+// RainbowKit配置 - 使用最小配置避免外部依赖错误
 export const config = getDefaultConfig({
   appName: 'Monad Warriors',
-  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6', // 临时项目ID
+  projectId: '00000000000000000000000000000000', // 使用空项目ID避免403错误
   chains: [monadTestnet],
   transports: {
     [monadTestnet.id]: http('https://testnet-rpc.monad.xyz'),

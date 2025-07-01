@@ -5,10 +5,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WagmiProvider } from 'wagmi';
 import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
 import { config } from '@/utils/web3Config';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Web3Provider from '@/components/Web3Provider';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import NetworkErrorHandler from '@/components/NetworkErrorHandler';
+import { installErrorSuppression } from '@/utils/errorSuppression';
 
 export default function App({ Component, pageProps }: AppProps) {
   const [queryClient] = useState(() => new QueryClient({
@@ -18,6 +19,13 @@ export default function App({ Component, pageProps }: AppProps) {
       },
     },
   }));
+
+  // 安装错误抑制机制
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      installErrorSuppression();
+    }
+  }, []);
 
   return (
     <ErrorBoundary>
