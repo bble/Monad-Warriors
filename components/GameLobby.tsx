@@ -335,6 +335,8 @@ export default function GameLobby() {
             )}
           </div>
 
+
+
           {/* Current Battle */}
           {currentBattle && (
             <div className="glass-panel p-6 battle-arena">
@@ -343,7 +345,7 @@ export default function GameLobby() {
                 {currentBattle.status === 'completed' && (
                   <span className="ml-2 text-sm">
                     {currentBattle.winner === 'draw' ? '🤝 Draw' :
-                     currentBattle.winner === playerState.address ? '🏆 You Win!' : '💀 You Lose'}
+                     currentBattle.winner === playerState?.address ? '🏆 You Win!' : '💀 You Lose'}
                   </span>
                 )}
               </h3>
@@ -399,7 +401,12 @@ export default function GameLobby() {
                 </div>
               </div>
 
-              {currentBattle.currentTurn === playerState.address && currentBattle.status === 'active' && (
+              {/* Debug info */}
+              <div className="text-xs text-gray-500 mb-2">
+                Debug: currentTurn={currentBattle.currentTurn}, playerAddress={playerState?.address}, status={currentBattle.status}
+              </div>
+
+              {currentBattle.currentTurn === playerState?.address && currentBattle.status === 'active' && (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">Choose Action</label>

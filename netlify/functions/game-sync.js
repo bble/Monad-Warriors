@@ -117,7 +117,29 @@ exports.handler = async (event, context) => {
           break;
 
         case 'leave':
-          gameState.players.delete(payload.address);
+          const leavingAddress = payload.address;
+          console.log(`🚪 Player leaving: ${leavingAddress}`);
+
+          // 删除玩家
+          gameState.players.delete(leavingAddress);
+          console.log(`✅ Player removed from players map: ${leavingAddress}`);
+
+          // 清理相关的战斗记录
+          const battlesToRemove = [];
+          for (const [battleId, battle] of gameState.battles.entries()) {
+            if (battle.player1 === leavingAddress || battle.player2 === leavingAddress) {
+              battlesToRemove.push(battleId);
+              console.log(`🗑️ Marking battle for removal: ${battleId} (involves ${leavingAddress})`);
+            }
+          }
+
+          // 删除相关战斗
+          battlesToRemove.forEach(battleId => {
+            gameState.battles.delete(battleId);
+            console.log(`✅ Battle removed: ${battleId}`);
+          });
+
+          console.log(`🧹 Cleanup complete for ${leavingAddress}: removed ${battlesToRemove.length} battles`);
           break;
 
         case 'update':
@@ -139,13 +161,14 @@ exports.handler = async (event, context) => {
             player2: payload.player2,
             hero1Id: payload.hero1Id,
             hero2Id: payload.hero2Id,
-            status: 'waiting',
+            status: 'active',
             currentTurn: payload.player1,
             moves: [],
             startTime: Date.now(),
             player1Hp: 100,
             player2Hp: 100,
-            maxHp: 100
+            maxHp: 100,
+            battleLog: [`Battle started! ${payload.player1.slice(0,6)}...${payload.player1.slice(-4)} vs ${payload.player2.slice(0,6)}...${payload.player2.slice(-4)}`]
           });
           
           // 更新玩家状态
@@ -166,28 +189,53 @@ exports.handler = async (event, context) => {
         case 'battle-move':
           const battle = gameState.battles.get(payload.battleId);
           if (battle && battle.status === 'active') {
-            // 简单的战斗逻辑
-            const damage = Math.floor(Math.random() * 30) + 10;
+            // 计算伤害基于动作类型
+            let damage = 0;
+            let actionDescription = '';
             const isPlayer1Turn = battle.currentTurn === battle.player1;
-            
+            const attacker = isPlayer1Turn ? 'Player1' : 'Player2';
+            const defender = isPlayer1Turn ? 'Player2' : 'Player1';
+
+            switch (payload.action) {
+              case 'attack':
+                damage = Math.floor(Math.random() * 11) + 15; // 15-25 damage
+                actionDescription = `${attacker} attacks for ${damage} damage!`;
+                break;
+              case 'defend':
+                damage = Math.floor(Math.random() * 6) + 5; // 5-10 damage (reduced)
+                actionDescription = `${attacker} defends but still takes ${damage} damage!`;
+                break;
+              case 'special':
+                damage = Math.floor(Math.random() * 16) + 20; // 20-35 damage
+                actionDescription = `${attacker} uses special attack for ${damage} damage!`;
+                break;
+            }
+
+            // 应用伤害
             if (isPlayer1Turn) {
               battle.player2Hp = Math.max(0, battle.player2Hp - damage);
             } else {
               battle.player1Hp = Math.max(0, battle.player1Hp - damage);
             }
-            
+
+            // 添加到战斗日志
+            if (!battle.battleLog) battle.battleLog = [];
+            battle.battleLog.push(actionDescription);
+
             battle.moves.push({
               player: battle.currentTurn,
               action: payload.action,
               damage,
               timestamp: Date.now()
             });
-            
+
             // 检查战斗是否结束
             if (battle.player1Hp <= 0 || battle.player2Hp <= 0) {
               battle.status = 'completed';
               battle.winner = battle.player1Hp > 0 ? battle.player1 : battle.player2;
-              
+              const winnerName = battle.winner === battle.player1 ? 'Player1' : 'Player2';
+              battle.battleLog.push(`🏆 ${winnerName} wins the battle!`);
+
               // 重置玩家状态
               const p1 = gameState.players.get(battle.player1);
               const p2 = gameState.players.get(battle.player2);
@@ -196,8 +244,10 @@ exports.handler = async (event, context) => {
             } else {
               // 切换回合
               battle.currentTurn = battle.currentTurn === battle.player1 ? battle.player2 : battle.player1;
+              const nextPlayer = battle.currentTurn === battle.player1 ? 'Player1' : 'Player2';
+              battle.battleLog.push(`It's ${nextPlayer}'s turn!`);
             }
-            
+
             gameState.battles.set(payload.battleId, battle);
           }
           break;

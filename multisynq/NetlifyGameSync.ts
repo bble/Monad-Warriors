@@ -58,6 +58,10 @@ export class NetlifyGameSyncManager {
     try {
       console.log('🚀 Initializing Netlify Game Sync...');
       await this.fetchGameState();
+
+      // 初始连接后，强制触发所有现有玩家的playerJoined事件
+      this.syncExistingPlayers();
+
       this.startPolling();
       this.isConnected = true;
       console.log('✅ Netlify Game Sync connected successfully');
@@ -69,10 +73,22 @@ export class NetlifyGameSyncManager {
   }
 
   /**
+   * 同步现有玩家状态
+   */
+  private syncExistingPlayers(): void {
+    console.log(`🔄 Syncing ${this.gameState.players.size} existing players...`);
+    Array.from(this.gameState.players.entries()).forEach(([address, player]) => {
+      this.emit('playerJoined', { player });
+      console.log(`👤 Synced existing player: ${address}`);
+    });
+  }
+
+  /**
    * 获取游戏状态
    */
   private async fetchGameState(): Promise<void> {
     try {
+      console.log(`📡 Fetching game state from: ${this.apiUrl}`);
       const response = await fetch(this.apiUrl, {
         method: 'GET',
         headers: {
@@ -80,16 +96,24 @@ export class NetlifyGameSyncManager {
         },
       });
 
+      console.log(`📡 Fetch response status: ${response.status} ${response.statusText}`);
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error(`❌ Fetch error response:`, errorText);
+        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
       }
 
       const result = await response.json();
+      console.log(`✅ Fetch response data: ${result.data?.players?.length || 0} players, ${result.data?.battles?.length || 0} battles`);
+
       if (result.success) {
         this.updateGameState(result.data);
+      } else {
+        console.error('❌ Fetch response indicates failure:', result);
       }
     } catch (error) {
-      console.error('Failed to fetch game state:', error);
+      console.error('❌ Failed to fetch game state:', error);
       throw error;
     }
   }
@@ -140,14 +164,29 @@ export class NetlifyGameSyncManager {
 
     console.log(`🔄 Updating game state: ${data.players?.length || 0} players, ${data.battles?.length || 0} battles`);
 
-    // 更新玩家状态
-    this.gameState.players.clear();
-    if (data.players) {
-      data.players.forEach((player: PlayerState) => {
-        this.gameState.players.set(player.address, player);
-        console.log(`👤 Player: ${player.address.slice(0,6)}...${player.address.slice(-4)} (${player.status})`);
-      });
+    // 防护机制：如果服务器返回空数据，可能是临时状态，不要清除现有玩家
+    if (!data.players || data.players.length === 0) {
+      console.log('⚠️ Server returned empty player data, skipping player state update to prevent false "playerLeft" events');
+
+      // 只更新战斗状态，保持玩家状态不变
+      if (data.battles) {
+        this.gameState.battles.clear();
+        data.battles.forEach((battle: BattleState) => {
+          this.gameState.battles.set(battle.id, battle);
+        });
+
+        // 只检测战斗变化
+        this.detectBattleChangesOnly(oldBattles);
+      }
+      return;
     }
+
+    // 更新玩家状态 - 只有当服务器返回有效玩家数据时
+    this.gameState.players.clear();
+    data.players.forEach((player: PlayerState) => {
+      this.gameState.players.set(player.address, player);
+      console.log(`👤 Player: ${player.address.slice(0,6)}...${player.address.slice(-4)} (${player.status})`);
+    });
 
     // 更新战斗状态
     this.gameState.battles.clear();
@@ -164,6 +203,36 @@ export class NetlifyGameSyncManager {
   }
 
   /**
+   * 只检测战斗变化（当玩家数据不可靠时使用）
+   */
+  private detectBattleChangesOnly(oldBattles: Map<string, BattleState>): void {
+    // 检测新的战斗
+    Array.from(this.gameState.battles.entries()).forEach(([battleId, battle]) => {
+      if (!oldBattles.has(battleId)) {
+        this.emit('battleCreated', { battleId, battle });
+        console.log(`⚔️ Battle created: ${battleId}`);
+      } else {
+        const oldBattle = oldBattles.get(battleId);
+        if (oldBattle && oldBattle.moves.length !== battle.moves.length) {
+          this.emit('battleUpdated', { battleId, battle });
+          console.log(`🔄 Battle updated: ${battleId}`);
+        }
+      }
+    });
+
+    // 检测完成的战斗
+    Array.from(oldBattles.keys()).forEach(battleId => {
+      if (!this.gameState.battles.has(battleId)) {
+        const oldBattle = oldBattles.get(battleId);
+        if (oldBattle) {
+          this.emit('battleCompleted', { battleId, battle: oldBattle });
+          console.log(`🏁 Battle completed: ${battleId}`);
+        }
+      }
+    });
+  }
+
+  /**
    * 检测变化并触发相应事件
    */
   private detectAndEmitChanges(oldPlayers: Map<string, PlayerState>, oldBattles: Map<string, BattleState>): void {
@@ -171,13 +240,31 @@ export class NetlifyGameSyncManager {
     Array.from(this.gameState.players.entries()).forEach(([address, player]) => {
       if (!oldPlayers.has(address)) {
         this.emit('playerJoined', { player });
+        console.log(`🎮 Emitting playerJoined event for: ${address}`);
+      } else {
+        // 检测玩家状态更新
+        const oldPlayer = oldPlayers.get(address);
+        if (oldPlayer && (oldPlayer.status !== player.status || oldPlayer.heroId !== player.heroId)) {
+          this.emit('playerUpdated', { address, player });
+          console.log(`🔄 Emitting playerUpdated event for: ${address} (${oldPlayer.status} -> ${player.status})`);
+        }
       }
     });
 
-    // 检测离开的玩家
+    // 检测离开的玩家 - 但不要触发当前正在创建战斗的玩家的离开事件
     Array.from(oldPlayers.keys()).forEach(address => {
       if (!this.gameState.players.has(address)) {
-        this.emit('playerLeft', { address });
+        // 额外检查：如果这个玩家参与了新创建的战斗，不要触发离开事件
+        const isInNewBattle = Array.from(this.gameState.battles.values()).some(battle =>
+          battle.player1 === address || battle.player2 === address
+        );
+
+        if (!isInNewBattle) {
+          this.emit('playerLeft', { address });
+          console.log(`🚪 Emitting playerLeft event for: ${address}`);
+        } else {
+          console.log(`⚔️ Player ${address} is in a new battle, not emitting playerLeft event`);
+        }
       }
     });
 
@@ -198,11 +285,13 @@ export class NetlifyGameSyncManager {
    * 开始轮询
    */
   private startPolling(): void {
+    console.log(`🔄 Starting polling every ${this.pollInterval}ms`);
     this.syncInterval = setInterval(async () => {
       try {
+        console.log('🔄 Polling for game state updates...');
         await this.fetchGameState();
       } catch (error) {
-        console.error('Polling error:', error);
+        console.error('❌ Polling error:', error);
       }
     }, this.pollInterval);
   }
@@ -225,6 +314,13 @@ export class NetlifyGameSyncManager {
    */
   async addPlayer(playerState: PlayerState): Promise<void> {
     console.log(`🎮 Adding player to Netlify API: ${playerState.address} with hero ${playerState.heroId}`);
+
+    // 立即添加到本地状态
+    this.gameState.players.set(playerState.address, playerState);
+    this.emit('playerJoined', { player: playerState });
+    console.log('🎮 Player added to local state:', playerState.address);
+
+    // 发送API请求到服务器
     const result = await this.sendApiRequest('join', {
       address: playerState.address,
       heroId: playerState.heroId
@@ -236,6 +332,15 @@ export class NetlifyGameSyncManager {
    * 移除玩家
    */
   async removePlayer(address: string): Promise<void> {
+    // 立即从本地状态中移除玩家
+    const removedPlayer = this.gameState.players.get(address);
+    if (removedPlayer) {
+      this.gameState.players.delete(address);
+      this.emit('playerLeft', { address });
+      console.log('🚪 Player removed from local state:', address);
+    }
+
+    // 发送API请求到服务器
     await this.sendApiRequest('leave', { address });
     console.log('✅ Player removed via Netlify API:', address);
   }

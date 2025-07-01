@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import {
-  gameSyncManager,
   PlayerState,
   BattleState,
   BattleMove
@@ -42,13 +41,8 @@ export function useGameSync(): UseGameSyncReturn {
 
   // 根据环境选择同步管理器
   const getSyncManager = useCallback(() => {
-    if (typeof window !== 'undefined') {
-      const hostname = window.location.hostname;
-      if (hostname.includes('netlify.app') || hostname.includes('netlify.com')) {
-        return netlifyGameSyncManager;
-      }
-    }
-    return gameSyncManager;
+    // 始终使用Netlify版本，因为我们已经部署到Netlify
+    return netlifyGameSyncManager;
   }, []);
 
   // 连接到游戏同步服务
@@ -89,11 +83,6 @@ export function useGameSync(): UseGameSyncReturn {
       await syncManager.addPlayer(newPlayerState);
       setPlayerState(newPlayerState);
       console.log('✅ Successfully joined game:', address);
-
-      // 同时保存到sessionStorage，用于页面刷新后恢复
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('monad-game-player-state', JSON.stringify(newPlayerState));
-      }
     } catch (error) {
       console.error('❌ Failed to join game:', error);
     }
@@ -104,16 +93,17 @@ export function useGameSync(): UseGameSyncReturn {
     if (!address) return;
 
     try {
-      const syncManager = getSyncManager();
-      await syncManager.removePlayer(address);
+      console.log('🚪 Starting leave game process for:', address);
+
+      // 立即设置playerState为null
       setPlayerState(null);
       setCurrentBattle(null);
-      console.log('✅ Successfully left game:', address);
+      console.log('🚫 Set playerState to null');
 
-      // 清理sessionStorage
-      if (typeof window !== 'undefined') {
-        sessionStorage.removeItem('monad-game-player-state');
-      }
+      // 调用服务器移除
+      const syncManager = getSyncManager();
+      await syncManager.removePlayer(address);
+      console.log('✅ Successfully left game:', address);
     } catch (error) {
       console.error('❌ Failed to leave game:', error);
     }
@@ -141,7 +131,9 @@ export function useGameSync(): UseGameSyncReturn {
 
   // 创建战斗
   const createBattle = useCallback(async (opponentAddress: string, opponentHeroId: number): Promise<string> => {
-    if (!address || !playerState) return '';
+    if (!address || !playerState) {
+      return '';
+    }
 
     const battleId = `battle_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const newBattle: BattleState = {
@@ -337,30 +329,46 @@ export function useGameSync(): UseGameSyncReturn {
 
   // 设置事件监听器
   useEffect(() => {
+    const syncManager = getSyncManager();
+
     const handleConnected = () => {
       setIsConnected(true);
-      setConnectionStatus(gameSyncManager.getConnectionStatus());
+      setConnectionStatus(syncManager.getConnectionStatus());
       console.log('✅ Connected to MultiSYNQ');
     };
 
     const handleDisconnected = () => {
       setIsConnected(false);
-      setConnectionStatus(gameSyncManager.getConnectionStatus());
+      setConnectionStatus(syncManager.getConnectionStatus());
       setPlayerState(null);
       setCurrentBattle(null);
       console.log('❌ Disconnected from MultiSYNQ');
     };
 
     const handlePlayerJoined = ({ player }: { player: PlayerState }) => {
+      console.log('🎮 handlePlayerJoined called for:', player.address);
       setOnlinePlayers(prev => {
         const filtered = prev.filter(p => p.address !== player.address);
-        return [...filtered, player];
+        const newList = [...filtered, player];
+        console.log(`👥 Updated online players: ${newList.length} total`);
+        return newList;
       });
       console.log('✅ Player joined:', player.address);
     };
 
     const handlePlayerLeft = ({ address: leftAddress }: { address: string }) => {
-      setOnlinePlayers(prev => prev.filter(p => p.address !== leftAddress));
+      setOnlinePlayers(prev => {
+        const newList = prev.filter(p => p.address !== leftAddress);
+        return newList;
+      });
+
+      // 如果离开的是当前用户，清除playerState
+      if (leftAddress === address) {
+        setPlayerState(null);
+        setCurrentBattle(null);
+        console.log('🚪 Current user left the game');
+      }
+
       console.log('❌ Player left:', leftAddress);
     };
 
@@ -422,98 +430,76 @@ export function useGameSync(): UseGameSyncReturn {
     };
 
     // 注册事件监听器
-    gameSyncManager.on('connected', handleConnected);
-    gameSyncManager.on('disconnected', handleDisconnected);
-    gameSyncManager.on('playerJoined', handlePlayerJoined);
-    gameSyncManager.on('playerLeft', handlePlayerLeft);
-    gameSyncManager.on('playerUpdated', handlePlayerUpdated);
-    gameSyncManager.on('battleCreated', handleBattleCreated);
-    gameSyncManager.on('battleUpdated', handleBattleUpdated);
-    gameSyncManager.on('battleCompleted', handleBattleCompleted);
-    gameSyncManager.on('battleMove', handleBattleMove);
+    syncManager.on('connected', handleConnected);
+    syncManager.on('disconnected', handleDisconnected);
+    syncManager.on('playerJoined', handlePlayerJoined);
+    syncManager.on('playerLeft', handlePlayerLeft);
+    syncManager.on('playerUpdated', handlePlayerUpdated);
+    syncManager.on('battleCreated', handleBattleCreated);
+    syncManager.on('battleUpdated', handleBattleUpdated);
+    syncManager.on('battleCompleted', handleBattleCompleted);
+    syncManager.on('battleMove', handleBattleMove);
 
     // 清理函数
     return () => {
-      gameSyncManager.off('connected', handleConnected);
-      gameSyncManager.off('disconnected', handleDisconnected);
-      gameSyncManager.off('playerJoined', handlePlayerJoined);
-      gameSyncManager.off('playerLeft', handlePlayerLeft);
-      gameSyncManager.off('playerUpdated', handlePlayerUpdated);
-      gameSyncManager.off('battleCreated', handleBattleCreated);
-      gameSyncManager.off('battleUpdated', handleBattleUpdated);
-      gameSyncManager.off('battleCompleted', handleBattleCompleted);
-      gameSyncManager.off('battleMove', handleBattleMove);
+      syncManager.off('connected', handleConnected);
+      syncManager.off('disconnected', handleDisconnected);
+      syncManager.off('playerJoined', handlePlayerJoined);
+      syncManager.off('playerLeft', handlePlayerLeft);
+      syncManager.off('playerUpdated', handlePlayerUpdated);
+      syncManager.off('battleCreated', handleBattleCreated);
+      syncManager.off('battleUpdated', handleBattleUpdated);
+      syncManager.off('battleCompleted', handleBattleCompleted);
+      syncManager.off('battleMove', handleBattleMove);
     };
-  }, [address]);
+  }, [address, getSyncManager]);
 
   // 定期更新在线玩家、活跃战斗和连接状态
   useEffect(() => {
     if (!isConnected) return;
 
+    console.log('🔄 Setting up periodic state updates...');
+    const syncManager = getSyncManager();
+
     // 立即更新一次
-    setOnlinePlayers(gameSyncManager.getOnlinePlayers());
-    setActiveBattles(gameSyncManager.getActiveBattles());
-    setConnectionStatus(gameSyncManager.getConnectionStatus());
+    const initialPlayers = syncManager.getOnlinePlayers();
+    const initialBattles = syncManager.getActiveBattles();
+    console.log(`📊 Initial state: ${initialPlayers.length} players, ${initialBattles.length} battles`);
+
+    setOnlinePlayers(initialPlayers);
+    setActiveBattles(initialBattles);
+    setConnectionStatus(syncManager.getConnectionStatus());
 
     const updateInterval = setInterval(() => {
-      setOnlinePlayers(gameSyncManager.getOnlinePlayers());
-      setActiveBattles(gameSyncManager.getActiveBattles());
-      setConnectionStatus(gameSyncManager.getConnectionStatus());
+      const currentPlayers = syncManager.getOnlinePlayers();
+      const currentBattles = syncManager.getActiveBattles();
+      console.log(`📊 Periodic update: ${currentPlayers.length} players, ${currentBattles.length} battles`);
+
+      setOnlinePlayers(currentPlayers);
+      setActiveBattles(currentBattles);
+      setConnectionStatus(syncManager.getConnectionStatus());
     }, 2000);
 
     return () => clearInterval(updateInterval);
-  }, [isConnected]);
+  }, [isConnected, getSyncManager]);
 
   // 自动心跳 - 保持玩家在线状态
   useEffect(() => {
     if (!isConnected || !address || !playerState) return;
 
+    const syncManager = getSyncManager();
     const heartbeatInterval = setInterval(() => {
       // 更新玩家的lastUpdate时间，保持在线状态
-      gameSyncManager.updatePlayer(address, {
+      syncManager.updatePlayer(address, {
         lastUpdate: Date.now()
       });
       console.log('💓 Player heartbeat sent');
     }, 15000); // 每15秒发送一次心跳
 
     return () => clearInterval(heartbeatInterval);
-  }, [isConnected, address, playerState]);
+  }, [isConnected, address, playerState, getSyncManager]);
 
-  // 恢复玩家状态
-  useEffect(() => {
-    if (isConnected && address && !playerState) {
-      // 首先尝试从sessionStorage恢复
-      if (typeof window !== 'undefined') {
-        const stored = sessionStorage.getItem('monad-game-player-state');
-        if (stored) {
-          try {
-            const storedPlayerState = JSON.parse(stored);
-            if (storedPlayerState.address === address) {
-              // 重新加入游戏
-              const restoredState = {
-                ...storedPlayerState,
-                lastUpdate: Date.now(),
-              };
-              gameSyncManager.addPlayer(restoredState);
-              setPlayerState(restoredState);
-              console.log('Restored player state from sessionStorage:', restoredState);
-              return;
-            }
-          } catch (error) {
-            console.error('Failed to restore from sessionStorage:', error);
-          }
-        }
-      }
-
-      // 然后检查是否有之前的玩家状态需要恢复
-      const players = gameSyncManager.getOnlinePlayers();
-      const existingPlayer = players.find(p => p.address === address);
-      if (existingPlayer) {
-        setPlayerState(existingPlayer);
-        console.log('Restored player state from game sync:', existingPlayer);
-      }
-    }
-  }, [isConnected, address, playerState]);
+  // 注意：移除了自动状态恢复逻辑，用户必须手动加入游戏
 
   // 自动连接
   useEffect(() => {
