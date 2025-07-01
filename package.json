@@ -5,10 +5,13 @@
   "main": "index.js",
   "scripts": {
     "dev": "next dev -p 3001",
+    "dev:full": "concurrently \"npm run dev\" \"npm run websocket\"",
+    "websocket": "node server/websocket-server.js",
     "demo": "./scripts/demo-start.sh",
     "build": "next build",
     "export": "next export",
     "start": "next start",
+    "start:full": "concurrently \"npm run start\" \"npm run websocket\"",
     "lint": "next lint",
     "compile": "hardhat compile",
     "deploy": "hardhat run scripts/deploy.js",
@@ -35,6 +38,7 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
+    "concurrently": "^9.2.0",
     "hardhat": "^2.25.0",
     "jest": "^30.0.3",
     "jest-environment-jsdom": "^30.0.2"
