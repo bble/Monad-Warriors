@@ -110,7 +110,18 @@ export default function GameLobby() {
     if (opponent) {
       createBattle(opponent.address, opponent.heroId);
     } else {
-      alert('No available opponents found. Try again later!');
+      // 更详细的错误信息
+      const availableOpponents = onlinePlayers.filter(
+        player => player.address !== address && player.status === 'idle'
+      );
+
+      if (onlinePlayers.length <= 1) {
+        alert('You are the only player online. Invite friends to join the game!');
+      } else if (availableOpponents.length === 0) {
+        alert('All other players are currently busy in battles. Please wait or try again later!');
+      } else {
+        alert('No available opponents found. Try again later!');
+      }
     }
   };
 
@@ -136,7 +147,7 @@ export default function GameLobby() {
             </span>
           </div>
           <div className="text-sm text-gray-400">
-            {onlinePlayers.length} players online • {activeBattles.length} active battles
+            {onlinePlayers.length} players online • {onlinePlayers.filter(p => p.address !== address && p.status === 'idle').length} available for match • {activeBattles.length} active battles
           </div>
         </div>
       </div>
@@ -230,6 +241,9 @@ export default function GameLobby() {
             <p className="text-gray-400 mb-4">
               Find a random opponent for instant battle!
             </p>
+
+
+
             <button
               onClick={handleQuickMatch}
               disabled={playerState.status !== 'idle'}
@@ -241,11 +255,22 @@ export default function GameLobby() {
 
           {/* Online Players */}
           <div className="glass-panel p-6">
-            <h3 className="text-xl font-semibold mb-4">Online Players ({onlinePlayers.length})</h3>
-            
+            <h3 className="text-xl font-semibold mb-4">
+              Online Players ({onlinePlayers.length})
+              {onlinePlayers.length > 0 && (
+                <span className="text-sm text-gray-400 ml-2">
+                  • {onlinePlayers.filter(p => p.address !== address && p.status === 'idle').length} available
+                </span>
+              )}
+            </h3>
+
             {onlinePlayers.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
                 No other players online. Invite friends to join!
+              </div>
+            ) : onlinePlayers.filter(p => p.address !== address).length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                You are the only player online. Invite friends to join!
               </div>
             ) : (
               <div className="space-y-3">
@@ -263,7 +288,16 @@ export default function GameLobby() {
                             {player.address.slice(0, 6)}...{player.address.slice(-4)}
                           </div>
                           <div className="text-xs text-gray-400">
-                            Hero #{player.heroId} • {player.status}
+                            Hero #{player.heroId} •
+                            <span className={`ml-1 ${
+                              player.status === 'idle' ? 'text-green-400' :
+                              player.status === 'battling' ? 'text-red-400' :
+                              'text-yellow-400'
+                            }`}>
+                              {player.status === 'idle' ? 'Available' :
+                               player.status === 'battling' ? 'In Battle' :
+                               player.status}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -284,24 +318,56 @@ export default function GameLobby() {
           {/* Current Battle */}
           {currentBattle && (
             <div className="glass-panel p-6 battle-arena">
-              <h3 className="text-xl font-semibold mb-4">Active Battle</h3>
-              
+              <h3 className="text-xl font-semibold mb-4">
+                Active Battle
+                {currentBattle.status === 'completed' && (
+                  <span className="ml-2 text-sm">
+                    {currentBattle.winner === 'draw' ? '🤝 Draw' :
+                     currentBattle.winner === playerState.address ? '🏆 You Win!' : '💀 You Lose'}
+                  </span>
+                )}
+              </h3>
+
               <div className="grid md:grid-cols-2 gap-6 mb-6">
                 <div className="text-center">
                   <div className="text-lg font-semibold mb-2">
                     {currentBattle.player1 === playerState.address ? 'You' : 'Opponent'}
                   </div>
-                  <div className="text-sm text-gray-400">
+                  <div className="text-sm text-gray-400 mb-2">
                     Hero #{currentBattle.hero1Id}
                   </div>
+                  {/* HP Bar */}
+                  <div className="w-full bg-gray-700 rounded-full h-4 mb-2">
+                    <div
+                      className="bg-red-500 h-4 rounded-full transition-all duration-500"
+                      style={{
+                        width: `${Math.max(0, ((currentBattle.player1Hp || 100) / (currentBattle.maxHp || 100)) * 100)}%`
+                      }}
+                    ></div>
+                  </div>
+                  <div className="text-sm text-red-400">
+                    {currentBattle.player1Hp || 100}/{currentBattle.maxHp || 100} HP
+                  </div>
                 </div>
-                
+
                 <div className="text-center">
                   <div className="text-lg font-semibold mb-2">
                     {currentBattle.player2 === playerState.address ? 'You' : 'Opponent'}
                   </div>
-                  <div className="text-sm text-gray-400">
+                  <div className="text-sm text-gray-400 mb-2">
                     Hero #{currentBattle.hero2Id}
+                  </div>
+                  {/* HP Bar */}
+                  <div className="w-full bg-gray-700 rounded-full h-4 mb-2">
+                    <div
+                      className="bg-red-500 h-4 rounded-full transition-all duration-500"
+                      style={{
+                        width: `${Math.max(0, ((currentBattle.player2Hp || 100) / (currentBattle.maxHp || 100)) * 100)}%`
+                      }}
+                    ></div>
+                  </div>
+                  <div className="text-sm text-red-400">
+                    {currentBattle.player2Hp || 100}/{currentBattle.maxHp || 100} HP
                   </div>
                 </div>
               </div>
@@ -313,7 +379,7 @@ export default function GameLobby() {
                 </div>
               </div>
 
-              {currentBattle.currentTurn === playerState.address && (
+              {currentBattle.currentTurn === playerState.address && currentBattle.status === 'active' && (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">Choose Action</label>
@@ -328,12 +394,22 @@ export default function GameLobby() {
                               : 'border-gray-600 hover:border-gray-500'
                           }`}
                         >
-                          {action.charAt(0).toUpperCase() + action.slice(1)}
+                          <div className="text-center">
+                            <div className="text-lg mb-1">
+                              {action === 'attack' ? '⚔️' : action === 'defend' ? '🛡️' : '✨'}
+                            </div>
+                            <div className="text-xs">
+                              {action.charAt(0).toUpperCase() + action.slice(1)}
+                            </div>
+                            <div className="text-xs text-gray-400">
+                              {action === 'attack' ? '15-25 dmg' : action === 'defend' ? 'Reduce dmg' : '20-35 dmg'}
+                            </div>
+                          </div>
                         </button>
                       ))}
                     </div>
                   </div>
-                  
+
                   <button
                     onClick={handleBattleAction}
                     className="btn-primary w-full"
@@ -343,22 +419,41 @@ export default function GameLobby() {
                 </div>
               )}
 
+              {/* Battle Result */}
+              {currentBattle.status === 'completed' && (
+                <div className="mt-4 p-6 rounded-lg border-2 border-yellow-400 bg-yellow-400/10 animate-pulse">
+                  <div className="text-center">
+                    <div className="text-3xl mb-3">
+                      {currentBattle.winner === 'draw' ? '🤝' :
+                       currentBattle.winner === playerState.address ? '🏆' : '💀'}
+                    </div>
+                    <div className="text-2xl font-bold mb-2">
+                      {currentBattle.winner === 'draw' ? 'DRAW!' :
+                       currentBattle.winner === playerState.address ? 'VICTORY!' : 'DEFEAT!'}
+                    </div>
+                    <div className="text-lg text-yellow-300 mb-2">
+                      +{currentBattle.winner === 'draw' ? '5' :
+                        currentBattle.winner === playerState.address ? '10' : '2'} MWAR
+                    </div>
+                    <div className="text-sm text-gray-400">
+                      Battle rewards will be distributed shortly...
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Battle Log */}
               <div className="mt-6">
                 <h4 className="font-semibold mb-2">Battle Log</h4>
-                <div className="bg-gray-900/50 rounded p-3 max-h-32 overflow-y-auto">
-                  {currentBattle.moves.length === 0 ? (
-                    <div className="text-gray-400 text-sm">Battle starting...</div>
-                  ) : (
-                    currentBattle.moves.map((move, index) => (
-                      <div key={index} className="text-sm mb-1">
-                        <span className="text-blue-400">
-                          {move.playerId === playerState.address ? 'You' : 'Opponent'}
-                        </span>
-                        <span className="text-gray-300"> used </span>
-                        <span className="text-yellow-400">{move.action}</span>
+                <div className="bg-gray-900/50 rounded p-3 max-h-40 overflow-y-auto">
+                  {currentBattle.battleLog && currentBattle.battleLog.length > 0 ? (
+                    currentBattle.battleLog.map((log, index) => (
+                      <div key={index} className="text-sm mb-1 text-gray-300">
+                        {log}
                       </div>
                     ))
+                  ) : (
+                    <div className="text-gray-400 text-sm">Battle starting...</div>
                   )}
                 </div>
               </div>

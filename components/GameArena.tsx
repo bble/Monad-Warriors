@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from 'wagmi';
 import {
   GAME_CONSTANTS,
   getRarityColor,
@@ -9,6 +9,9 @@ import {
   CONTRACT_ADDRESSES,
   GAME_CORE_ABI
 } from '@/utils/contractABI';
+import { gameSyncManager } from '@/multisynq/GameSync';
+import { parseGwei } from 'viem';
+import GasEstimator from './GasEstimator';
 
 interface BattleHero {
   tokenId: number;
@@ -20,11 +23,13 @@ interface BattleHero {
 
 export default function GameArena() {
   const { address } = useAccount();
+  const publicClient = usePublicClient();
   const [selectedHero, setSelectedHero] = useState<BattleHero | null>(null);
   const [opponentAddress, setOpponentAddress] = useState('');
   const [opponentHeroId, setOpponentHeroId] = useState('');
   const [battleResult, setBattleResult] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [gasInfo, setGasInfo] = useState<any>(null);
 
   // 读取玩家统计数据
   const { data: playerStats } = useReadContract({
@@ -44,10 +49,12 @@ export default function GameArena() {
 
   // 开始战斗
   const { writeContract, data: battleHash } = useWriteContract();
-  
+
   const { isLoading: isBattleLoading, isSuccess: isBattleSuccess } = useWaitForTransactionReceipt({
     hash: battleHash,
   });
+
+
 
   // 模拟英雄数据 (实际应用中应该从合约读取)
   const mockHeroes: BattleHero[] = [
@@ -57,13 +64,42 @@ export default function GameArena() {
   ];
 
   const handleStartBattle = async () => {
-    if (!selectedHero || !opponentAddress || !opponentHeroId) return;
-    
+    if (!selectedHero || !opponentAddress || !opponentHeroId || !address) {
+      setBattleResult('❌ 请填写完整的战斗信息');
+      return;
+    }
+
+    if (!gasInfo) {
+      setBattleResult('❌ 请先进行Gas预估');
+      return;
+    }
+
     setIsLoading(true);
-    setBattleResult(null);
-    
+    setBattleResult('🚀 准备发送战斗交易...');
+
     try {
-      await writeContract({
+      // 1. 创建战斗状态并通过WebSocket同步
+      const battleId = `battle_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const battleState = {
+        id: battleId,
+        player1: address,
+        player2: opponentAddress,
+        hero1Id: selectedHero.tokenId,
+        hero2Id: parseInt(opponentHeroId),
+        status: 'active' as const,
+        currentTurn: address,
+        moves: [],
+        startTime: Date.now()
+      };
+
+      // 通过WebSocket同步战斗创建
+      gameSyncManager.createBattle(battleState);
+      console.log('🚀 Battle created and synced via WebSocket:', battleId);
+
+      setBattleResult('📡 发送交易到区块链...');
+
+      // 2. 调用智能合约（使用预估的gas）
+      const txConfig: any = {
         address: CONTRACT_ADDRESSES.GAME_CORE as `0x${string}`,
         abi: GAME_CORE_ABI,
         functionName: 'startPvPBattle',
@@ -72,10 +108,39 @@ export default function GameArena() {
           opponentAddress as `0x${string}`,
           BigInt(opponentHeroId)
         ],
-      });
-    } catch (error) {
+        gas: BigInt(gasInfo.gasLimit),
+      };
+
+      // 只有在有建议gas价格时才设置
+      if (gasInfo.suggestedGasPrice) {
+        txConfig.gasPrice = parseGwei(gasInfo.suggestedGasPrice);
+      }
+
+      console.log('📤 发送交易配置:', txConfig);
+
+      await writeContract(txConfig);
+
+      setBattleResult(`🎮 Battle ${battleId} started! 等待区块链确认...`);
+    } catch (error: any) {
       console.error('Battle failed:', error);
-      setBattleResult('Battle failed. Please try again.');
+
+      // 更详细的错误信息
+      let errorMessage = '❌ 战斗失败: ';
+      if (error.message?.includes('insufficient funds')) {
+        errorMessage += '余额不足，请确保有足够的MON支付gas费用。';
+      } else if (error.message?.includes('gas')) {
+        errorMessage += 'Gas相关错误，请尝试增加gas限制。';
+      } else if (error.message?.includes('revert')) {
+        errorMessage += '合约执行失败，请检查英雄所有权和冷却时间。';
+      } else if (error.message?.includes('rejected')) {
+        errorMessage += '用户取消了交易。';
+      } else if (error.message?.includes('INVALID_ARGUMENT')) {
+        errorMessage += '参数错误，请检查地址和英雄ID格式。';
+      } else {
+        errorMessage += error.message || '未知错误';
+      }
+
+      setBattleResult(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -186,19 +251,32 @@ export default function GameArena() {
               className="w-full p-3 bg-gray-800 border border-gray-600 rounded-lg focus:border-blue-400 focus:outline-none"
             />
           </div>
-          
+
+          {/* Gas预估器 */}
+          <div className="border-t border-gray-600 pt-4">
+            <h4 className="text-sm font-medium mb-3 text-gray-300">⛽ Gas费用预估</h4>
+            <GasEstimator
+              heroId={selectedHero?.tokenId.toString()}
+              opponentAddress={opponentAddress}
+              opponentHeroId={opponentHeroId}
+              onGasEstimated={setGasInfo}
+            />
+          </div>
+
           <button
             onClick={handleStartBattle}
-            disabled={!selectedHero || !opponentAddress || !opponentHeroId || isLoading || isBattleLoading}
+            disabled={!selectedHero || !opponentAddress || !opponentHeroId || !gasInfo || isLoading || isBattleLoading}
             className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading || isBattleLoading ? (
               <div className="flex items-center justify-center space-x-2">
                 <div className="loading-spinner"></div>
-                <span>Starting Battle...</span>
+                <span>发送交易中...</span>
               </div>
+            ) : !gasInfo ? (
+              '请先预估Gas费用'
             ) : (
-              'Start Battle'
+              '🚀 开始战斗'
             )}
           </button>
         </div>
@@ -220,12 +298,16 @@ export default function GameArena() {
         <p className="text-gray-400 mb-4">
           Find random opponents for quick battles. Coming soon!
         </p>
-        <button
-          disabled
-          className="btn-secondary w-full disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Find Match (Coming Soon)
-        </button>
+        <div className="space-y-3">
+          <button
+            disabled
+            className="btn-secondary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Find Match (Coming Soon)
+          </button>
+
+
+        </div>
       </div>
 
       {/* Leaderboard Preview */}

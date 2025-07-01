@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useAccount, useReadContract } from 'wagmi';
 import { GAME_CONSTANTS, getClassIcon, getRarityColor } from '@/utils/web3Config';
+import { CONTRACT_ADDRESSES, GAME_CORE_ABI } from '@/utils/contractABI';
+import { formatEther } from 'ethers';
+import PlayerDataViewer from './PlayerDataViewer';
 
 interface LeaderboardEntry {
   rank: number;
@@ -24,12 +27,39 @@ interface LeaderboardProps {
   category?: 'wins' | 'winRate' | 'rewards' | 'streak';
 }
 
+interface GlobalStats {
+  totalPlayers: number;
+  totalBattles: number;
+  totalRewardsDistributed: number;
+  totalHeroes: number;
+}
+
 export default function Leaderboard({ category = 'wins' }: LeaderboardProps) {
   const { address } = useAccount();
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [selectedCategory, setSelectedCategory] = useState(category);
   const [timeFilter, setTimeFilter] = useState<'all' | 'week' | 'month'>('all');
   const [isLoading, setIsLoading] = useState(false);
+
+  // 读取全局统计数据
+  const { data: globalStatsData } = useReadContract({
+    address: CONTRACT_ADDRESSES.GAME_CORE as `0x${string}`,
+    abi: GAME_CORE_ABI,
+    functionName: 'getGlobalStats',
+  }) as { data: [bigint, bigint, bigint, bigint] | undefined };
+
+  // 转换全局统计数据
+  const globalStats: GlobalStats = globalStatsData ? {
+    totalPlayers: Number(globalStatsData[0]),
+    totalBattles: Number(globalStatsData[1]),
+    totalRewardsDistributed: Math.round(Number(formatEther(globalStatsData[2]))),
+    totalHeroes: Number(globalStatsData[3])
+  } : {
+    totalPlayers: 0,
+    totalBattles: 0,
+    totalRewardsDistributed: 0,
+    totalHeroes: 0
+  };
 
   // 获取真实排行榜数据
   const fetchLeaderboardData = async (): Promise<LeaderboardEntry[]> => {
@@ -240,23 +270,34 @@ export default function Leaderboard({ category = 'wins' }: LeaderboardProps) {
         <h3 className="text-lg font-semibold mb-4">📈 Global Stats</h3>
         <div className="grid md:grid-cols-4 gap-4">
           <div className="text-center">
-            <div className="text-2xl font-bold text-blue-400">1,247</div>
+            <div className="text-2xl font-bold text-blue-400">
+              {globalStats.totalPlayers.toLocaleString()}
+            </div>
             <div className="text-sm text-gray-400">Total Players</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-green-400">8,934</div>
+            <div className="text-2xl font-bold text-green-400">
+              {globalStats.totalBattles.toLocaleString()}
+            </div>
             <div className="text-sm text-gray-400">Battles Fought</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-yellow-400">156,780</div>
+            <div className="text-2xl font-bold text-yellow-400">
+              {globalStats.totalRewardsDistributed.toLocaleString()}
+            </div>
             <div className="text-sm text-gray-400">MWAR Distributed</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-purple-400">3,421</div>
+            <div className="text-2xl font-bold text-purple-400">
+              {globalStats.totalHeroes.toLocaleString()}
+            </div>
             <div className="text-sm text-gray-400">Heroes Created</div>
           </div>
         </div>
       </div>
+
+      {/* 玩家数据查看器 */}
+      <PlayerDataViewer />
     </div>
   );
 }

@@ -14,6 +14,8 @@ import Marketplace from '@/components/Marketplace';
 import Guild from '@/components/Guild';
 import Quests from '@/components/Quests';
 
+
+
 export default function Home() {
   const { address, isConnected } = useAccount();
   const [activeTab, setActiveTab] = useState('heroes');
@@ -163,10 +165,13 @@ export default function Home() {
                 {activeTab === 'guild' && <Guild />}
                 {activeTab === 'leaderboard' && <Leaderboard />}
                 {activeTab === 'stats' && <PlayerStats />}
+
               </div>
             </>
           )}
         </main>
+
+
 
         {/* Footer */}
         <footer className="glass-panel m-4 p-4 text-center text-gray-400">

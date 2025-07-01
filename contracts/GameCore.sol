@@ -284,7 +284,7 @@ contract GameCore is Ownable, Pausable, ReentrancyGuard {
      */
     function _updateLeaderboard(address player) internal {
         PlayerStats memory stats = playerStats[player];
-        if (stats.totalBattles < 10) return; // 至少10场战斗才能上榜
+        if (stats.totalBattles < 1) return; // 至少1场战斗才能上榜
 
         uint256 winRate = (stats.wins * 100) / stats.totalBattles;
 
@@ -444,6 +444,38 @@ contract GameCore is Ownable, Pausable, ReentrancyGuard {
         }
 
         return recentBattles;
+    }
+
+    /**
+     * @dev 获取全局统计数据
+     */
+    function getGlobalStats() external view returns (
+        uint256 totalPlayers,
+        uint256 totalBattles,
+        uint256 totalRewardsDistributed,
+        uint256 totalHeroes
+    ) {
+        // 计算总玩家数（有战斗记录的玩家）
+        totalPlayers = 0;
+        totalRewardsDistributed = 0;
+
+        // 遍历排行榜来计算活跃玩家数和总奖励
+        for (uint256 i = 0; i < leaderboard.length; i++) {
+            address player = leaderboard[i];
+            PlayerStats memory stats = playerStats[player];
+            if (stats.totalBattles > 0) {
+                totalPlayers++;
+                totalRewardsDistributed += stats.totalRewards;
+            }
+        }
+
+        // 总战斗数
+        totalBattles = battleHistory.length;
+
+        // 总英雄数（从HeroNFT合约获取）
+        totalHeroes = heroNFT.totalSupply();
+
+        return (totalPlayers, totalBattles, totalRewardsDistributed, totalHeroes);
     }
 
     /**

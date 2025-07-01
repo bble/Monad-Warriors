@@ -1,0 +1,23 @@
+{
+  "network": "monadTestnet",
+  "chainId": 10143,
+  "deployer": "0xDB7E64447b7F537712dcA18516F11fF91b58ea5a",
+  "deployedAt": "2025-01-01T00:00:00.000Z",
+  "contracts": {
+    "MWAR_TOKEN": "0xa200561a8e6325fD24AE767c1701F2d1Aa3860e1",
+    "HERO_NFT": "0x01Eb7582f8cf98EeB5bd7F0aCfC8DACCeeD18F96",
+    "GAME_CORE": "0x935e44C9fAc29E17AcE3E5AB047D8027E6E1A101"
+  },
+  "gasUsed": {
+    "MWAR_TOKEN": "5000000",
+    "HERO_NFT": "5000000", 
+    "GAME_CORE": "5000000"
+  },
+  "totalGasUsed": "15000000",
+  "totalCost": "0.75",
+  "verification": {
+    "totalSupply": "1000000000.0",
+    "poolBalance": "1000000000.0",
+    "isGameContract": true
+  }
+}
