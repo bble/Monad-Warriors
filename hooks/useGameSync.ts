@@ -239,42 +239,59 @@ export function useGameSync(): UseGameSyncReturn {
       }
 
       // 调用智能合约分发奖励
-      // 使用GameCore.startPvPBattle来触发奖励分发
-      if (battle.hero1Id && battle.hero2Id) {
+      // 使用GameCore.submitBattleResult来提交战斗结果并分发奖励
+      if (battle.hero1Id && battle.hero2Id && battle.winner) {
         const opponentAddress = battle.player1 === address ? battle.player2 : battle.player1;
         const myHeroId = battle.player1 === address ? battle.hero1Id : battle.hero2Id;
         const opponentHeroId = battle.player1 === address ? battle.hero2Id : battle.hero1Id;
 
-        console.log(`🔗 Calling smart contract for battle rewards...`);
-        console.log(`My Hero: ${myHeroId}, Opponent: ${opponentAddress}, Opponent Hero: ${opponentHeroId}`);
+        // 确定战斗结果枚举值 (0=Win, 1=Lose, 2=Draw)
+        let battleResult;
+        if (battle.winner === 'draw') {
+          battleResult = 2; // Draw
+        } else if (battle.winner === address) {
+          battleResult = 0; // Win
+        } else {
+          battleResult = 1; // Lose
+        }
 
-        // 调用GameCore合约的startPvPBattle函数
-        await writeContract({
-          address: CONTRACT_ADDRESSES.GAME_CORE as `0x${string}`,
-          abi: [
-            {
-              "inputs": [
-                {"internalType": "uint256", "name": "myHeroId", "type": "uint256"},
-                {"internalType": "address", "name": "opponent", "type": "address"},
-                {"internalType": "uint256", "name": "opponentHeroId", "type": "uint256"}
-              ],
-              "name": "startPvPBattle",
-              "outputs": [],
-              "stateMutability": "nonpayable",
-              "type": "function"
-            }
-          ],
-          functionName: 'startPvPBattle',
-          args: [
-            BigInt(myHeroId),
-            opponentAddress as `0x${string}`,
-            BigInt(opponentHeroId)
-          ],
-          gas: BigInt(500000), // 设置足够的gas limit
-          gasPrice: parseEther('0.000000015'), // 15 gwei gas price
-        });
+        console.log(`🔗 Submitting battle result to smart contract...`);
+        console.log(`Result: ${battleResult} (0=Win, 1=Lose, 2=Draw), Reward: ${rewardAmount} MWAR`);
 
-        console.log(`✅ Smart contract call initiated for battle rewards`);
+        try {
+          // 调用GameCore合约的submitBattleResult函数
+          await writeContract({
+            address: CONTRACT_ADDRESSES.GAME_CORE as `0x${string}`,
+            abi: [
+              {
+                "inputs": [
+                  {"internalType": "uint256", "name": "myHeroId", "type": "uint256"},
+                  {"internalType": "address", "name": "opponent", "type": "address"},
+                  {"internalType": "uint256", "name": "opponentHeroId", "type": "uint256"},
+                  {"internalType": "uint8", "name": "result", "type": "uint8"}
+                ],
+                "name": "submitBattleResult",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+              }
+            ],
+            functionName: 'submitBattleResult',
+            args: [
+              BigInt(myHeroId),
+              opponentAddress as `0x${string}`,
+              BigInt(opponentHeroId),
+              battleResult
+            ],
+            gas: BigInt(300000), // 降低gas limit节省费用
+            gasPrice: parseEther('0.000000020'), // 20 gwei gas price
+          });
+
+          console.log(`✅ Battle result submitted and rewards distributed!`);
+        } catch (error) {
+          console.error('❌ Failed to submit battle result:', error);
+          // 即使链上调用失败，也显示本地奖励通知
+        }
       }
 
     } catch (error) {

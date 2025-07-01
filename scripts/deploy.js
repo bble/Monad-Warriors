@@ -39,6 +39,19 @@ async function main() {
   };
 
   try {
+    // 获取当前网络的gas价格并设置合理的费用
+    console.log("\n⛽ Getting current gas prices...");
+    const feeData = await ethers.provider.getFeeData();
+    console.log("Current gas price:", ethers.formatUnits(feeData.gasPrice || 0, "gwei"), "gwei");
+
+    // 设置gas选项 - 比当前价格高50%以确保被包含
+    const gasPrice = feeData.gasPrice ? feeData.gasPrice * BigInt(150) / BigInt(100) : ethers.parseUnits("50", "gwei");
+    const gasOptions = {
+      gasPrice: gasPrice,
+      gasLimit: 5000000
+    };
+    console.log("Using gas price:", ethers.formatUnits(gasPrice, "gwei"), "gwei");
+
     // 1. 部署MWAR Token
     console.log("\n🪙 1. Deploying MWAR Token...");
     const MWARToken = await ethers.getContractFactory("MWARToken");
@@ -47,7 +60,8 @@ async function main() {
       teamWallet,
       investorWallet,
       communityWallet,
-      ecosystemWallet
+      ecosystemWallet,
+      gasOptions
     );
     await mwarToken.waitForDeployment();
     const mwarAddress = await mwarToken.getAddress();
@@ -57,7 +71,7 @@ async function main() {
     // 2. 部署Hero NFT
     console.log("\n⚔️ 2. Deploying Hero NFT...");
     const HeroNFT = await ethers.getContractFactory("HeroNFT");
-    const heroNFT = await HeroNFT.deploy(mwarAddress);
+    const heroNFT = await HeroNFT.deploy(mwarAddress, gasOptions);
     await heroNFT.waitForDeployment();
     const heroAddress = await heroNFT.getAddress();
     console.log("✅ Hero NFT deployed to:", heroAddress);
@@ -66,7 +80,7 @@ async function main() {
     // 3. 部署Game Core
     console.log("\n🎮 3. Deploying Game Core...");
     const GameCore = await ethers.getContractFactory("GameCore");
-    const gameCore = await GameCore.deploy(mwarAddress, heroAddress);
+    const gameCore = await GameCore.deploy(mwarAddress, heroAddress, gasOptions);
     await gameCore.waitForDeployment();
     const gameAddress = await gameCore.getAddress();
     console.log("✅ Game Core deployed to:", gameAddress);
@@ -74,7 +88,7 @@ async function main() {
 
     // 4. 配置权限
     console.log("\n🔐 4. Setting up permissions...");
-    const tx1 = await mwarToken.addGameContract(gameAddress);
+    const tx1 = await mwarToken.addGameContract(gameAddress, gasOptions);
     await tx1.wait();
     console.log("✅ Game Core added as authorized contract");
 

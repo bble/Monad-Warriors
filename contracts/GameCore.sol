@@ -359,6 +359,59 @@ contract GameCore is Ownable, Pausable, ReentrancyGuard {
     }
     
     /**
+     * @dev 提交战斗结果并分发奖励（用于客户端战斗）
+     */
+    function submitBattleResult(
+        uint256 myHeroId,
+        address opponent,
+        uint256 opponentHeroId,
+        BattleResult result
+    ) external whenNotPaused nonReentrant {
+        require(heroNFT.ownerOf(myHeroId) == msg.sender, "Not owner of hero");
+        require(heroNFT.ownerOf(opponentHeroId) == opponent, "Invalid opponent hero");
+        require(
+            block.timestamp >= playerStats[msg.sender].lastBattleTime + BATTLE_COOLDOWN,
+            "Battle cooldown not finished"
+        );
+
+        // 检查每日奖励限制
+        _updateDailyRewardDate(msg.sender);
+        require(
+            dailyRewards[msg.sender] < DAILY_REWARD_LIMIT,
+            "Daily reward limit reached"
+        );
+
+        // 分发奖励给当前玩家
+        uint256 rewardAmount = _distributeRewards(msg.sender, opponent, result);
+
+        // 更新统计数据
+        _updatePlayerStats(msg.sender, result, rewardAmount);
+
+        // 记录战斗历史
+        battleHistory.push(BattleRecord({
+            player1: msg.sender,
+            player2: opponent,
+            hero1Id: myHeroId,
+            hero2Id: opponentHeroId,
+            result: result,
+            timestamp: block.timestamp,
+            rewardAmount: rewardAmount
+        }));
+
+        // 更新排行榜
+        _updateLeaderboard(msg.sender);
+
+        emit BattleCompleted(
+            msg.sender,
+            opponent,
+            myHeroId,
+            opponentHeroId,
+            result,
+            rewardAmount
+        );
+    }
+
+    /**
      * @dev 设置奖励金额
      */
     function setRewardAmounts(
